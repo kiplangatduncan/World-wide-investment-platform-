@@ -1,1 +1,125 @@
+{% extends "base.html" %}
 
+{% block title %}
+Withdrawals
+{% endblock %}
+
+{% block content %}
+
+<div class="section-heading">
+
+    <div>
+
+        <span class="badge">
+            WITHDRAWALS
+        </span>
+
+        <h1>
+            Withdraw Funds
+        </h1>
+
+        <p>
+            Submit a withdrawal request.
+        </p>
+
+    </div>
+
+    <div class="big-icon">
+        🏦
+    </div>
+
+</div>
+
+
+<div class="form-card wide">
+
+    <div class="balance-box">
+
+        <span>
+            Available Balance
+        </span>
+
+        <strong>
+            {{ current_user.currency }}
+            {{ "%.2f"|format(current_user.balance) }}
+        </strong>
+
+    </div>
+
+
+    <form method="POST">
+
+        <label>
+            Amount
+        </label>
+
+        <input
+            type="number"
+            name="amount"
+            min="1"
+            step="0.01"
+            placeholder="Enter amount"
+            required
+        >
+
+
+        <label>
+            Payment Method
+        </label>
+
+        <select
+            name="payment_method"
+            required
+        >
+
+            <option value="M-Pesa">
+                M-Pesa
+            </option>
+
+            <option value="Bank">
+                Bank
+            </option>
+
+            <option value="Card">
+                Card
+            </option>
+
+        </select>
+
+
+        <label>
+            Account Name
+        </label>
+
+        <input
+            type="text"
+            name="account_name"
+            placeholder="Account holder name"
+            required
+        >
+
+
+        <label>
+            Account Number / Phone
+        </label>
+
+        <input
+            type="text"
+            name="account_number"
+            placeholder="Account number or phone"
+            required
+        >
+
+
+        <button
+            type="submit"
+            class="primary-button full-width"
+        >
+            Submit Withdrawal
+        </button>
+
+    </form>
+
+</div>
+
+{% endblock %}
