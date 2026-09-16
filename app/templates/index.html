@@ -1,1 +1,136 @@
+{% extends "base.html" %}
 
+{% block title %}
+Investment Platform
+{% endblock %}
+
+{% block content %}
+
+<section class="hero">
+
+    <div class="hero-text">
+
+        <span class="badge">
+            SMART INVESTING
+        </span>
+
+        <h1>
+            Grow your money with a smarter investment platform.
+        </h1>
+
+        <p>
+            Create an account, fund your wallet,
+            choose an investment plan and monitor
+            your investments from one dashboard.
+        </p>
+
+        <div class="hero-buttons">
+
+            <a
+                href="{{ url_for('auth.register') }}"
+                class="primary-button"
+            >
+                Start Investing
+            </a>
+
+            <a
+                href="{{ url_for('auth.login') }}"
+                class="secondary-button"
+            >
+                Login
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <div class="money-card">
+
+        <div class="coin coin-one">
+            💰
+        </div>
+
+        <div class="coin coin-two">
+            💵
+        </div>
+
+        <div class="coin coin-three">
+            💎
+        </div>
+
+        <div class="growth-chart">
+            📈
+        </div>
+
+        <h2>
+            Your Financial Journey
+        </h2>
+
+        <p>
+            Deposit → Invest → Track
+        </p>
+
+    </div>
+
+</section>
+
+
+<section class="features">
+
+    <div class="feature-card">
+
+        <div class="feature-icon">
+            💳
+        </div>
+
+        <h3>
+            Easy Deposits
+        </h3>
+
+        <p>
+            Fund your investment account using
+            available payment methods.
+        </p>
+
+    </div>
+
+
+    <div class="feature-card">
+
+        <div class="feature-icon">
+            📊
+        </div>
+
+        <h3>
+            Track Investments
+        </h3>
+
+        <p>
+            Monitor active investments and
+            their maturity information.
+        </p>
+
+    </div>
+
+
+    <div class="feature-card">
+
+        <div class="feature-icon">
+            🌍
+        </div>
+
+        <h3>
+            Multiple Countries
+        </h3>
+
+        <p>
+            Support for different currencies
+            and payment methods.
+        </p>
+
+    </div>
+
+</section>
+
+{% endblock %}
