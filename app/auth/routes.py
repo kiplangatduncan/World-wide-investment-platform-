@@ -16,7 +16,7 @@ auth_bp = Blueprint(
 def register():
 
     if current_user.is_authenticated:
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("main.dashboard"))
 
     if request.method == "POST":
 
