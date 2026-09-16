@@ -51,7 +51,12 @@ def create_app():
         app.register_blueprint(investments_bp)
     except ImportError:
         pass
-
+    # Main application routes
+    try:
+        from app.routes.main import main_bp
+        app.register_blueprint(main_bp)
+    except ImportError:
+        pass
     # Payments
     try:
         from app.routes.payments import payments_bp
