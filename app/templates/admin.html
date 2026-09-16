@@ -1,1 +1,206 @@
+{% extends "base.html" %}
 
+{% block title %}
+Admin Dashboard
+{% endblock %}
+
+{% block content %}
+
+<div class="section-heading">
+
+    <div>
+
+        <span class="badge">
+            ADMINISTRATION
+        </span>
+
+        <h1>
+            Admin Dashboard
+        </h1>
+
+        <p>
+            Manage the investment platform.
+        </p>
+
+    </div>
+
+    <div class="big-icon">
+        👑
+    </div>
+
+</div>
+
+
+<section class="stats-grid">
+
+    <div class="stat-card purple">
+
+        <span>
+            Users
+        </span>
+
+        <strong>
+            {{ users_count or 0 }}
+        </strong>
+
+        <div class="stat-icon">
+            👥
+        </div>
+
+    </div>
+
+
+    <div class="stat-card green">
+
+        <span>
+            Investments
+        </span>
+
+        <strong>
+            {{ investments_count or 0 }}
+        </strong>
+
+        <div class="stat-icon">
+            📈
+        </div>
+
+    </div>
+
+
+    <div class="stat-card blue">
+
+        <span>
+            Deposits
+        </span>
+
+        <strong>
+            {{ deposits_count or 0 }}
+        </strong>
+
+        <div class="stat-icon">
+            💰
+        </div>
+
+    </div>
+
+
+    <div class="stat-card orange">
+
+        <span>
+            Withdrawals
+        </span>
+
+        <strong>
+            {{ withdrawals_count or 0 }}
+        </strong>
+
+        <div class="stat-icon">
+            🏦
+        </div>
+
+    </div>
+
+</section>
+
+
+<div class="admin-links">
+
+    <a
+        href="{{ url_for(
+            'admin_payments.payment_accounts'
+        ) }}"
+        class="admin-link"
+    >
+        💳
+        <strong>
+            Payment Accounts
+        </strong>
+        <small>
+            Manage receiving accounts
+        </small>
+    </a>
+
+
+    <a
+        href="{{ url_for(
+            'admin.admin_dashboard'
+        ) }}"
+        class="admin-link"
+    >
+        👥
+        <strong>
+            Users
+        </strong>
+        <small>
+            View registered users
+        </small>
+    </a>
+
+</div>
+
+
+{% if users %}
+
+<section class="investment-history">
+
+    <h2>
+        Recent Users
+    </h2>
+
+    <div class="table-container">
+
+        <table>
+
+            <thead>
+
+                <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Country</th>
+                    <th>Joined</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for user in users %}
+
+                <tr>
+
+                    <td>
+                        {{ user.full_name }}
+                    </td>
+
+                    <td>
+                        {{ user.username }}
+                    </td>
+
+                    <td>
+                        {{ user.email }}
+                    </td>
+
+                    <td>
+                        {{ user.country or "—" }}
+                    </td>
+
+                    <td>
+                        {{ user.created_at.strftime("%Y-%m-%d") }}
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</section>
+
+{% endif %}
+
+{% endblock %}
