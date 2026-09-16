@@ -28,7 +28,7 @@
 <header class="navbar">
 
     <a
-        href="{{ url_for('main,index') }}"
+        href="{{ url_for('main.index') }}"
         class="brand"
     >
         💰 InvestPro
@@ -38,46 +38,46 @@
 
         {% if current_user.is_authenticated %}
 
-            <a href="{{ url_for('main,dashboard') }}">
+            <a href="{{ url_for('main.dashboard') }}">
                 Dashboard
             </a>
 
-            <a href="{{ url_for('main,investments.investments') }}">
+            <a href="{{ url_for('main.investments.investments') }}">
                 Investments
             </a>
 
-            <a href="{{ url_for('main,payments.deposit') }}">
+            <a href="{{ url_for('main.payments.deposit') }}">
                 Deposit
             </a>
 
-            <a href="{{ url_for('main,withdrawals') }}">
+            <a href="{{ url_for('main.withdrawals') }}">
                 Withdraw
             </a>
 
-            <a href="{{ url_for('main,transactions') }}">
+            <a href="{{ url_for('main.transactions') }}">
                 Transactions
             </a>
 
             {% if current_user.is_admin %}
 
-                <a href="{{ url_for('main,admin.admin_dashboard') }}">
+                <a href="{{ url_for('main.admin.admin_dashboard') }}">
                     Admin
                 </a>
 
             {% endif %}
 
-            <a href="{{ url_for('main,auth.logout') }}">
+            <a href="{{ url_for('main.auth.logout') }}">
                 Logout
             </a>
 
         {% else %}
 
-            <a href="{{ url_for('main,auth.login') }}">
+            <a href="{{ url_for('main.auth.login') }}">
                 Login
             </a>
 
             <a
-                href="{{ url_for('main,auth.register') }}"
+                href="{{ url_for('main.auth.register') }}"
                 class="nav-button"
             >
                 Create Account
