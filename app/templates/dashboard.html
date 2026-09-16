@@ -1,1 +1,183 @@
+{% extends "base.html" %}
 
+{% block title %}
+Dashboard
+{% endblock %}
+
+{% block content %}
+
+<section class="dashboard-header">
+
+    <div>
+
+        <span class="badge">
+            INVESTOR DASHBOARD
+        </span>
+
+        <h1>
+            Welcome, {{ current_user.full_name }} 👋
+        </h1>
+
+        <p>
+            Manage your investment account from here.
+        </p>
+
+    </div>
+
+    <div class="dashboard-money-icon">
+        💰
+    </div>
+
+</section>
+
+
+<section class="stats-grid">
+
+    <div class="stat-card purple">
+
+        <span>
+            Available Balance
+        </span>
+
+        <strong>
+            {{ current_user.currency }}
+            {{ "%.2f"|format(current_user.balance) }}
+        </strong>
+
+        <div class="stat-icon">
+            💳
+        </div>
+
+    </div>
+
+
+    <div class="stat-card green">
+
+        <span>
+            Total Deposited
+        </span>
+
+        <strong>
+            {{ current_user.currency }}
+            {{ "%.2f"|format(current_user.total_deposited) }}
+        </strong>
+
+        <div class="stat-icon">
+            💵
+        </div>
+
+    </div>
+
+
+    <div class="stat-card blue">
+
+        <span>
+            Total Invested
+        </span>
+
+        <strong>
+            {{ current_user.currency }}
+            {{ "%.2f"|format(current_user.total_invested) }}
+        </strong>
+
+        <div class="stat-icon">
+            📈
+        </div>
+
+    </div>
+
+
+    <div class="stat-card orange">
+
+        <span>
+            Total Withdrawn
+        </span>
+
+        <strong>
+            {{ current_user.currency }}
+            {{ "%.2f"|format(current_user.total_withdrawn) }}
+        </strong>
+
+        <div class="stat-icon">
+            🏦
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="quick-actions">
+
+    <h2>
+        Quick Actions
+    </h2>
+
+    <div class="action-grid">
+
+        <a
+            href="{{ url_for('payments.deposit') }}"
+            class="action-card"
+        >
+            <span>💰</span>
+            <strong>Deposit</strong>
+            <small>Add funds</small>
+        </a>
+
+
+        <a
+            href="{{ url_for('investments.investments') }}"
+            class="action-card"
+        >
+            <span>📈</span>
+            <strong>Invest</strong>
+            <small>Choose a plan</small>
+        </a>
+
+
+        <a
+            href="{{ url_for('withdrawals') }}"
+            class="action-card"
+        >
+            <span>🏦</span>
+            <strong>Withdraw</strong>
+            <small>Request funds</small>
+        </a>
+
+
+        <a
+            href="{{ url_for('transactions') }}"
+            class="action-card"
+        >
+            <span>📋</span>
+            <strong>Transactions</strong>
+            <small>View history</small>
+        </a>
+
+    </div>
+
+</section>
+
+
+<section class="dashboard-banner">
+
+    <div>
+
+        <h2>
+            Build your investment journey 📊
+        </h2>
+
+        <p>
+            Review your available investment plans
+            and choose according to your own financial goals.
+        </p>
+
+    </div>
+
+    <div class="banner-icon">
+        📈💰
+    </div>
+
+</section>
+
+{% endblock %}
