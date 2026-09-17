@@ -19,7 +19,6 @@ def register():
 
     if request.method == "POST":
 
-        # Get form information
         full_name = request.form.get("full_name", "").strip()
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "").strip().lower()
@@ -37,9 +36,9 @@ def register():
         ).strip().upper()
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # VALIDATION
-        # ====================================================
+        # ----------------------------------------------------
 
         if not full_name:
             flash("Please enter your full name.")
@@ -74,9 +73,9 @@ def register():
             return render_template("register.html")
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # CLEAN PHONE NUMBER
-        # ====================================================
+        # ----------------------------------------------------
 
         phone = (
             phone
@@ -86,22 +85,20 @@ def register():
             .replace(")", "")
         )
 
-        # Remove + if user entered it
         if phone.startswith("+"):
             phone = phone[1:]
 
-        # Remove leading zero
         if phone.startswith("0"):
             phone = phone[1:]
 
 
-        # Create international phone number
+        # Create international number
         international_phone = phone_code + phone
 
 
-        # ====================================================
-        # CHECK EXISTING USERNAME
-        # ====================================================
+        # ----------------------------------------------------
+        # CHECK USERNAME
+        # ----------------------------------------------------
 
         existing_username = User.query.filter_by(
             username=username
@@ -112,9 +109,9 @@ def register():
             return render_template("register.html")
 
 
-        # ====================================================
-        # CHECK EXISTING EMAIL
-        # ====================================================
+        # ----------------------------------------------------
+        # CHECK EMAIL
+        # ----------------------------------------------------
 
         existing_email = User.query.filter_by(
             email=email
@@ -125,9 +122,9 @@ def register():
             return render_template("register.html")
 
 
-        # ====================================================
-        # CHECK EXISTING PHONE
-        # ====================================================
+        # ----------------------------------------------------
+        # CHECK PHONE
+        # ----------------------------------------------------
 
         existing_phone = User.query.filter_by(
             phone=international_phone
@@ -138,9 +135,9 @@ def register():
             return render_template("register.html")
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # CREATE USER
-        # ====================================================
+        # ----------------------------------------------------
 
         user = User(
             full_name=full_name,
@@ -151,14 +148,12 @@ def register():
             currency=currency
         )
 
-
-        # Securely hash password
         user.set_password(password)
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # SAVE USER
-        # ====================================================
+        # ----------------------------------------------------
 
         try:
 
@@ -176,16 +171,17 @@ def register():
             return render_template("register.html")
 
 
-        # ====================================================
+        # ----------------------------------------------------
         # SUCCESS
-        # ====================================================
+        # ----------------------------------------------------
 
         flash("Account created successfully. Please log in.")
 
-        return redirect(url_for("auth.login"))
+        return redirect(
+            url_for("auth.login")
+        )
 
 
-    # GET request
     return render_template("register.html")
 
 
