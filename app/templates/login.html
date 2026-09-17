@@ -1,70 +1,151 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
 
-{% block title %}
-Login
-{% endblock %}
+<head>
 
-{% block content %}
+    <meta charset="UTF-8">
 
-<div class="form-page">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <div class="form-card">
+    <title>Login</title>
 
-        <div class="form-icon">
-            🔐
-        </div>
+    <style>
 
-        <h1>
-            Welcome Back
-        </h1>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+        }
 
-        <p>
-            Login to your investment account.
-        </p>
+        .container {
+            width: 90%;
+            max-width: 420px;
+            margin: 70px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
 
-        <form method="POST">
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+        }
 
-            <label>
-                Email or Username
-            </label>
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
 
-            <input
-                type="text"
-                name="login"
-                placeholder="Enter email or username"
-                required
-            >
+        input {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
 
-            <label>
-                Password
-            </label>
+        button {
+            width: 100%;
+            margin-top: 25px;
+            padding: 13px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
 
-            <input
-                type="password"
-                name="password"
-                placeholder="Enter password"
-                required
-            >
+        .message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            background: #eee;
+        }
 
-            <button
-                type="submit"
-                class="primary-button full-width"
-            >
-                Login
-            </button>
+        .register {
+            text-align: center;
+            margin-top: 20px;
+        }
 
-        </form>
+        a {
+            text-decoration: none;
+        }
 
-        <p class="form-footer">
-            Don't have an account?
+    </style>
 
-            <a href="{{ url_for('auth.register') }}">
-                Create one
-            </a>
-        </p>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Login</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+
+        {% if messages %}
+
+            {% for category, message in messages %}
+
+                <div class="message">
+                    {{ message }}
+                </div>
+
+            {% endfor %}
+
+        {% endif %}
+
+    {% endwith %}
+
+    <form method="POST">
+
+        <label for="email">
+            Email
+        </label>
+
+        <input
+            type="email"
+            id="email"
+            name="email"
+            required
+        >
+
+        <label for="password">
+            Password
+        </label>
+
+        <input
+            type="password"
+            id="password"
+            name="password"
+            required
+        >
+
+        <button type="submit">
+            Login
+        </button>
+
+    </form>
+
+    <div class="register">
+
+        Don't have an account?
+
+        <a href="{{ url_for('auth.register') }}">
+            Register
+        </a>
 
     </div>
 
 </div>
 
-{% endblock %}
+</body>
+
+</html>w
