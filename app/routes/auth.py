@@ -15,10 +15,6 @@ from app.models import User
 auth_bp = Blueprint("auth", __name__)
 
 
-# -------------------------------------------------
-# LOGIN
-# -------------------------------------------------
-
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
 
@@ -32,7 +28,6 @@ def login():
                 "Please enter your email and password.",
                 "danger"
             )
-
             return render_template("login.html")
 
         user = User.query.filter_by(email=email).first()
@@ -60,10 +55,6 @@ def login():
     return render_template("login.html")
 
 
-# -------------------------------------------------
-# REGISTER
-# -------------------------------------------------
-
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
 
@@ -89,7 +80,6 @@ def register():
                 "Please complete all required fields.",
                 "danger"
             )
-
             return render_template("register.html")
 
         if password != confirm_password:
@@ -97,7 +87,6 @@ def register():
                 "Passwords do not match.",
                 "danger"
             )
-
             return render_template("register.html")
 
         existing_user = User.query.filter_by(
@@ -109,7 +98,6 @@ def register():
                 "An account with this email already exists.",
                 "danger"
             )
-
             return render_template("register.html")
 
         user = User(
@@ -134,10 +122,6 @@ def register():
     return render_template("register.html")
 
 
-# -------------------------------------------------
-# LOGOUT
-# -------------------------------------------------
-
 @auth_bp.route("/logout")
 def logout():
 
@@ -150,4 +134,4 @@ def logout():
 
     return redirect(
         url_for("auth.login")
-      )a
+    )
