@@ -129,7 +129,7 @@ def login():
             if next_page:
                 return redirect(next_page)
 
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("main.dashboard"))
 
         flash(
             "Invalid username/email or password.",
