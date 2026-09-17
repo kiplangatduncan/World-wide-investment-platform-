@@ -92,7 +92,7 @@ def register():
 def login():
 
     if current_user.is_authenticated:
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("main.dashboard"))
 
     if request.method == "POST":
 
