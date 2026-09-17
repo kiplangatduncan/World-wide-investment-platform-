@@ -1,1 +1,1 @@
-# Main application routes package
+# Routes package
