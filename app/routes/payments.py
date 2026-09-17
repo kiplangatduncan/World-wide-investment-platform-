@@ -109,7 +109,7 @@ def deposit():
                 )
 
                 return redirect(
-                    url_for("dashboard")
+                    url_for("main.dashboard")
                 )
 
             except Exception:
