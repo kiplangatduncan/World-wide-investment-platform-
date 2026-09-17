@@ -8,7 +8,7 @@ auth = Blueprint(
     __name__,
     url_prefix="/auth"
 )
-
+print("AUTH BLUEPRINT LOADED")
 
 # ============================================================
 # REGISTER
