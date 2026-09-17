@@ -40,7 +40,7 @@ def admin_required(function):
             )
 
             return redirect(
-                url_for("dashboard")
+                url_for("main.dashboard")
             )
 
         return function(*args, **kwargs)
