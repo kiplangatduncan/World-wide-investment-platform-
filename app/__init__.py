@@ -31,68 +31,95 @@ def create_app():
     # Initialize database
     db.init_app(app)
 
-    # Initialize login system
+    # Initialize Flask-Login
     login_manager.init_app(app)
 
+
     # ========================================================
-    # REGISTER BLUEPRINTS
+    # REGISTER AUTHENTICATION BLUEPRINT
     # ========================================================
 
-    # Authentication
-    try:
-        from app.auth.routes import auth_bp
-        app.register_blueprint(auth_bp)
-    except ImportError:
-        pass
+    from app.auth.routes import auth
 
-    # Investments
+    app.register_blueprint(auth)
+
+
+    # ========================================================
+    # REGISTER INVESTMENTS BLUEPRINT
+    # ========================================================
+
     try:
         from app.investments.routes import investments_bp
         app.register_blueprint(investments_bp)
-    except ImportError:
-        pass
-    # Main application routes
+    except ImportError as e:
+        print("Investments blueprint not loaded:", e)
+
+
+    # ========================================================
+    # REGISTER MAIN BLUEPRINT
+    # ========================================================
+
     try:
         from app.routes.main import main_bp
         app.register_blueprint(main_bp)
-    except ImportError:
-        pass
-    # Payments
+    except ImportError as e:
+        print("Main blueprint not loaded:", e)
+
+
+    # ========================================================
+    # REGISTER PAYMENTS BLUEPRINT
+    # ========================================================
+
     try:
         from app.routes.payments import payments_bp
         app.register_blueprint(payments_bp)
-    except ImportError:
-        pass
+    except ImportError as e:
+        print("Payments blueprint not loaded:", e)
 
-    # Payment callbacks
+
+    # ========================================================
+    # REGISTER PAYMENT CALLBACKS
+    # ========================================================
+
     try:
         from app.payments.callbacks import callbacks_bp
         app.register_blueprint(callbacks_bp)
-    except ImportError:
-        pass
+    except ImportError as e:
+        print("Payment callbacks not loaded:", e)
 
-    # Admin
+
+    # ========================================================
+    # REGISTER ADMIN BLUEPRINT
+    # ========================================================
+
     try:
         from app.admin.routes import admin_bp
         app.register_blueprint(admin_bp)
-    except ImportError:
-        pass
+    except ImportError as e:
+        print("Admin blueprint not loaded:", e)
 
-    # Admin payment accounts
+
+    # ========================================================
+    # REGISTER ADMIN PAYMENT ACCOUNTS
+    # ========================================================
+
     try:
         from app.routes.admin_payments import admin_payments_bp
         app.register_blueprint(admin_payments_bp)
-    except ImportError:
-        pass
+    except ImportError as e:
+        print("Admin payment accounts not loaded:", e)
+
 
     # ========================================================
     # CREATE DATABASE TABLES
     # ========================================================
 
     with app.app_context():
+
         from app import models
 
         db.create_all()
+
 
     return app
 
@@ -107,10 +134,12 @@ def load_user(user_id):
     from app.models import User
 
     try:
+
         return db.session.get(
             User,
             int(user_id)
         )
 
     except (ValueError, TypeError):
+
         return None
