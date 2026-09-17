@@ -1,237 +1,154 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from app import db
-from app.models import User
+<!DOCTYPE html>
+<html lang="en">
 
+<head>
 
-auth = Blueprint(
-    "auth",
-    __name__,
-    url_prefix="/auth"
-)
+    <meta charset="UTF-8">
 
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-# ============================================================
-# REGISTER
-# ============================================================
+    <title>Register</title>
 
-@auth.route("/register", methods=["GET", "POST"])
-def register():
+    <style>
 
-    if request.method == "POST":
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 420px;
+            margin: 50px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
 
-        # ----------------------------------------------------
-        # Get form information
-        # ----------------------------------------------------
+        input {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
 
-        full_name = request.form.get("full_name", "").strip()
-        username = request.form.get("username", "").strip()
-        email = request.form.get("email", "").strip().lower()
+        button {
+            width: 100%;
+            margin-top: 25px;
+            padding: 13px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
 
-        country = request.form.get("country", "").strip()
-        phone_code = request.form.get("phone_code", "").strip()
-        phone = request.form.get("phone", "").strip()
+        .message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            background: #eee;
+        }
 
-        password = request.form.get("password", "")
-        confirm_password = request.form.get("confirm_password", "")
+        .login {
+            text-align: center;
+            margin-top: 20px;
+        }
 
-        currency = request.form.get("currency", "KES").strip().upper()
+    </style>
 
+</head>
 
-        # ----------------------------------------------------
-        # Basic validation
-        # ----------------------------------------------------
+<body>
 
-        if not full_name:
-            flash("Please enter your full name.")
-            return render_template("register.html")
+<div class="container">
 
-        if len(username) < 3:
-            flash("Username must be at least 3 characters.")
-            return render_template("register.html")
+    <h1>Create Account</h1>
 
-        if not email:
-            flash("Please enter your email address.")
-            return render_template("register.html")
+    {% with messages = get_flashed_messages(with_categories=true) %}
 
-        if not country:
-            flash("Please select your country.")
-            return render_template("register.html")
+        {% if messages %}
 
-        if not phone_code:
-            flash("Please select your country phone code.")
-            return render_template("register.html")
+            {% for category, message in messages %}
 
-        if not phone:
-            flash("Please enter your phone number.")
-            return render_template("register.html")
+                <div class="message">
+                    {{ message }}
+                </div>
 
-        if len(password) < 6:
-            flash("Password must be at least 6 characters.")
-            return render_template("register.html")
+            {% endfor %}
 
-        if password != confirm_password:
-            flash("Passwords do not match.")
-            return render_template("register.html")
+        {% endif %}
 
+    {% endwith %}
 
-        # ----------------------------------------------------
-        # Clean phone number
-        # ----------------------------------------------------
+    <form method="POST">
 
-        # Remove spaces, dashes and brackets
-        phone = (
-            phone
-            .replace(" ", "")
-            .replace("-", "")
-            .replace("(", "")
-            .replace(")", "")
-        )
+        <label>
+            Email
+        </label>
 
-        # If user accidentally enters + at the beginning,
-        # remove it because the country code is added below.
-        if phone.startswith("+"):
-            phone = phone[1:]
+        <input
+            type="email"
+            name="email"
+            required
+        >
 
+        <label>
+            Password
+        </label>
 
-        # Remove leading zero.
-        # Example:
-        # 0712345678 -> 712345678
-        if phone.startswith("0"):
-            phone = phone[1:]
+        <input
+            type="password"
+            name="password"
+            required
+        >
 
+        <label>
+            Confirm Password
+        </label>
 
-        # Make complete international number.
-        # Example:
-        # +254 + 712345678
-        # becomes:
-        # +254712345678
+        <input
+            type="password"
+            name="confirm_password"
+            required
+        >
 
-        international_phone = phone_code + phone
+        <button type="submit">
+            Create Account
+        </button>
 
+    </form>
 
-        # ----------------------------------------------------
-        # Check existing accounts
-        # ----------------------------------------------------
+    <div class="login">
 
-        existing_username = User.query.filter_by(
-            username=username
-        ).first()
+        Already have an account?
 
-        if existing_username:
-            flash("That username is already registered.")
-            return render_template("register.html")
+        <a href="{{ url_for('auth.login') }}">
+            Login
+        </a>
 
+    </div>
 
-        existing_email = User.query.filter_by(
-            email=email
-        ).first()
+</div>
 
-        if existing_email:
-            flash("That email address is already registered.")
-            return render_template("register.html")
+</body>
 
-
-        existing_phone = User.query.filter_by(
-            phone=international_phone
-        ).first()
-
-        if existing_phone:
-            flash("That phone number is already registered.")
-            return render_template("register.html")
-
-
-        # ----------------------------------------------------
-        # Create new user
-        # ----------------------------------------------------
-
-        user = User(
-            full_name=full_name,
-            username=username,
-            email=email,
-            phone=international_phone,
-            country=country,
-            currency=currency
-        )
-
-        # Password is securely hashed by the User model.
-        user.set_password(password)
-
-
-        # ----------------------------------------------------
-        # Save account
-        # ----------------------------------------------------
-
-        try:
-
-            db.session.add(user)
-            db.session.commit()
-
-        except Exception as e:
-
-            db.session.rollback()
-
-            print("REGISTRATION ERROR:", e)
-
-            flash("Registration failed. Please try again.")
-
-            return render_template("register.html")
-
-
-        # ----------------------------------------------------
-        # Registration successful
-        # ----------------------------------------------------
-
-        flash("Account created successfully. Please log in.")
-
-        return redirect(url_for("auth.login"))
-
-
-    # GET request
-    return render_template("register.html")
-
-
-# ============================================================
-# LOGIN
-# ============================================================
-
-@auth.route("/login", methods=["GET", "POST"])
-def login():
-
-    if request.method == "POST":
-
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
-
-        user = User.query.filter_by(
-            username=username
-        ).first()
-
-        if user and user.check_password(password):
-
-            # Import here to avoid circular imports
-            from flask import session
-
-            session["user_id"] = user.id
-            session["username"] = user.username
-
-            return redirect(url_for("main.dashboard"))
-
-        flash("Invalid username or password.")
-
-    return render_template("login.html")
-
-
-# ============================================================
-# LOGOUT
-# ============================================================
-
-@auth.route("/logout")
-def logout():
-
-    from flask import session
-
-    session.clear()
-
-    flash("You have been logged out.")
-
-    return redirect(url_for("auth.login"))
+</html>
