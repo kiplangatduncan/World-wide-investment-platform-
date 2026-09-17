@@ -1,153 +1,246 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
-from flask_login import login_user, logout_user, login_required, current_user
-
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from app import db
 from app.models import User
 
 
-auth_bp = Blueprint(
+auth = Blueprint(
     "auth",
     __name__,
     url_prefix="/auth"
 )
 
 
-@auth_bp.route("/register", methods=["GET", "POST"])
-def register():
+# ============================================================
+# REGISTER
+# ============================================================
 
-    if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
+@auth.route("/register", methods=["GET", "POST"])
+def register():
 
     if request.method == "POST":
 
+        # Get form information
         full_name = request.form.get("full_name", "").strip()
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "").strip().lower()
-        phone = request.form.get("phone", "").strip()
+
         country = request.form.get("country", "").strip()
+        phone_code = request.form.get("phone_code", "").strip()
+        phone = request.form.get("phone", "").strip()
+
         password = request.form.get("password", "")
         confirm_password = request.form.get("confirm_password", "")
 
-        if not full_name or not username or not email or not password:
-            flash("Please fill in all required fields.", "danger")
+        currency = request.form.get(
+            "currency",
+            "KES"
+        ).strip().upper()
+
+
+        # ====================================================
+        # VALIDATION
+        # ====================================================
+
+        if not full_name:
+            flash("Please enter your full name.")
             return render_template("register.html")
 
-        if password != confirm_password:
-            flash("Passwords do not match.", "danger")
+        if len(username) < 3:
+            flash("Username must be at least 3 characters.")
+            return render_template("register.html")
+
+        if not email:
+            flash("Please enter your email address.")
+            return render_template("register.html")
+
+        if not country:
+            flash("Please select your country.")
+            return render_template("register.html")
+
+        if not phone_code:
+            flash("Please select your country phone code.")
+            return render_template("register.html")
+
+        if not phone:
+            flash("Please enter your phone number.")
             return render_template("register.html")
 
         if len(password) < 6:
-            flash("Password must contain at least 6 characters.", "danger")
+            flash("Password must be at least 6 characters.")
             return render_template("register.html")
+
+        if password != confirm_password:
+            flash("Passwords do not match.")
+            return render_template("register.html")
+
+
+        # ====================================================
+        # CLEAN PHONE NUMBER
+        # ====================================================
+
+        phone = (
+            phone
+            .replace(" ", "")
+            .replace("-", "")
+            .replace("(", "")
+            .replace(")", "")
+        )
+
+        # Remove + if user entered it
+        if phone.startswith("+"):
+            phone = phone[1:]
+
+        # Remove leading zero
+        if phone.startswith("0"):
+            phone = phone[1:]
+
+
+        # Create international phone number
+        international_phone = phone_code + phone
+
+
+        # ====================================================
+        # CHECK EXISTING USERNAME
+        # ====================================================
 
         existing_username = User.query.filter_by(
             username=username
         ).first()
 
         if existing_username:
-            flash("Username already exists.", "danger")
+            flash("That username is already registered.")
             return render_template("register.html")
+
+
+        # ====================================================
+        # CHECK EXISTING EMAIL
+        # ====================================================
 
         existing_email = User.query.filter_by(
             email=email
         ).first()
 
         if existing_email:
-            flash("Email already exists.", "danger")
+            flash("That email address is already registered.")
             return render_template("register.html")
 
-        if phone:
-            existing_phone = User.query.filter_by(
-                phone=phone
-            ).first()
 
-            if existing_phone:
-                flash("Phone number already exists.", "danger")
-                return render_template("register.html")
+        # ====================================================
+        # CHECK EXISTING PHONE
+        # ====================================================
+
+        existing_phone = User.query.filter_by(
+            phone=international_phone
+        ).first()
+
+        if existing_phone:
+            flash("That phone number is already registered.")
+            return render_template("register.html")
+
+
+        # ====================================================
+        # CREATE USER
+        # ====================================================
 
         user = User(
             full_name=full_name,
             username=username,
             email=email,
-            phone=phone or None,
-            country=country or None
+            phone=international_phone,
+            country=country,
+            currency=currency
         )
 
+
+        # Securely hash password
         user.set_password(password)
 
-        db.session.add(user)
-        db.session.commit()
 
-        flash(
-            "Registration successful. You can now log in.",
-            "success"
-        )
+        # ====================================================
+        # SAVE USER
+        # ====================================================
+
+        try:
+
+            db.session.add(user)
+            db.session.commit()
+
+        except Exception as e:
+
+            db.session.rollback()
+
+            print("REGISTRATION ERROR:", e)
+
+            flash("Registration failed. Please try again.")
+
+            return render_template("register.html")
+
+
+        # ====================================================
+        # SUCCESS
+        # ====================================================
+
+        flash("Account created successfully. Please log in.")
 
         return redirect(url_for("auth.login"))
 
+
+    # GET request
     return render_template("register.html")
 
 
-@auth_bp.route("/login", methods=["GET", "POST"])
-def login():
+# ============================================================
+# LOGIN
+# ============================================================
 
-    if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
+@auth.route("/login", methods=["GET", "POST"])
+def login():
 
     if request.method == "POST":
 
-        login_value = request.form.get(
-            "login",
+        username = request.form.get(
+            "username",
             ""
-        ).strip().lower()
+        ).strip()
 
         password = request.form.get(
             "password",
             ""
         )
 
-        user = User.query.filter(
-            db.or_(
-                User.email == login_value,
-                User.username == login_value
-            )
+
+        user = User.query.filter_by(
+            username=username
         ).first()
+
 
         if user and user.check_password(password):
 
-            if not user.is_active_user:
-                flash(
-                    "Your account has been disabled.",
-                    "danger"
-                )
-                return render_template("login.html")
+            session["user_id"] = user.id
+            session["username"] = user.username
 
-            login_user(user)
+            return redirect(
+                url_for("main.dashboard")
+            )
 
-            next_page = request.args.get("next")
 
-            if next_page:
-                return redirect(next_page)
+        flash("Invalid username or password.")
 
-            return redirect(url_for("main.dashboard"))
-
-        flash(
-            "Invalid username/email or password.",
-            "danger"
-        )
 
     return render_template("login.html")
 
 
-@auth_bp.route("/logout")
-@login_required
+# ============================================================
+# LOGOUT
+# ============================================================
+
+@auth.route("/logout")
 def logout():
 
-    logout_user()
+    session.clear()
 
-    flash(
-        "You have been logged out.",
-        "success"
+    flash("You have been logged out.")
+
+    return redirect(
+        url_for("auth.login")
     )
-
-    return redirect(url_for("index"))
