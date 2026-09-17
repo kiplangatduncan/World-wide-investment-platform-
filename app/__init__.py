@@ -5,14 +5,24 @@ from .extensions import db
 def create_app():
     app = Flask(__name__)
 
+    # -------------------------------------------------
+    # APP CONFIGURATION
+    # -------------------------------------------------
     app.config["SECRET_KEY"] = "change-this-secret-key"
 
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+    # -------------------------------------------------
+    # DATABASE
+    # -------------------------------------------------
     db.init_app(app)
 
-    # Main routes
+    # -------------------------------------------------
+    # BLUEPRINTS
+    # -------------------------------------------------
+
+    # Main
     from app.routes.main import main_bp
     app.register_blueprint(main_bp)
 
@@ -48,7 +58,9 @@ def create_app():
     except ImportError:
         pass
 
-    # Create database tables
+    # -------------------------------------------------
+    # DATABASE TABLE CREATION
+    # -------------------------------------------------
     with app.app_context():
         db.create_all()
 
