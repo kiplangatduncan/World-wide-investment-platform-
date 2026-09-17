@@ -1,156 +1,237 @@
-{% extends "base.html" %}
-
-{% block title %}
-Create Account
-{% endblock %}
-
-{% block content %}
-
-<div class="form-page">
-
-    <div class="form-card">
-
-        <div class="form-icon">
-            🚀
-        </div>
-
-        <h1>
-            Create Your Account
-        </h1>
-
-        <p>
-            Join the investment platform.
-        </p>
-
-        <form method="POST">
-
-            <label>
-                Full Name
-            </label>
-
-            <input
-                type="text"
-                name="full_name"
-                placeholder="Your full name"
-                required
-            >
+from flask import Blueprint, render_template, request, redirect, url_for, flash
+from app import db
+from app.models import User
 
 
-            <label>
-                Username
-            </label>
-
-            <input
-                type="text"
-                name="username"
-                placeholder="Choose a username"
-                required
-            >
+auth = Blueprint(
+    "auth",
+    __name__,
+    url_prefix="/auth"
+)
 
 
-            <label>
-                Email
-            </label>
+# ============================================================
+# REGISTER
+# ============================================================
 
-            <input
-                type="email"
-                name="email"
-                placeholder="you@example.com"
-                required
-            >
+@auth.route("/register", methods=["GET", "POST"])
+def register():
 
+    if request.method == "POST":
 
-            <label>
-                Phone Number
-            </label>
+        # ----------------------------------------------------
+        # Get form information
+        # ----------------------------------------------------
 
-            <input
-                type="text"
-                name="phone"
-                placeholder="+254..."
-            >
+        full_name = request.form.get("full_name", "").strip()
+        username = request.form.get("username", "").strip()
+        email = request.form.get("email", "").strip().lower()
 
+        country = request.form.get("country", "").strip()
+        phone_code = request.form.get("phone_code", "").strip()
+        phone = request.form.get("phone", "").strip()
 
-            <label>
-                Country
-            </label>
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
 
-            <select name="country">
-
-                <option value="Kenya">
-                    Kenya
-                </option>
-
-                <option value="Uganda">
-                    Uganda
-                </option>
-
-                <option value="Tanzania">
-                    Tanzania
-                </option>
-
-                <option value="Rwanda">
-                    Rwanda
-                </option>
-
-                <option value="Nigeria">
-                    Nigeria
-                </option>
-
-                <option value="South Africa">
-                    South Africa
-                </option>
-
-                <option value="United Kingdom">
-                    United Kingdom
-                </option>
-
-                <option value="United States">
-                    United States
-                </option>
-
-                <option value="Europe">
-                    Europe
-                </option>
-
-            </select>
+        currency = request.form.get("currency", "KES").strip().upper()
 
 
-            <label>
-                Password
-            </label>
+        # ----------------------------------------------------
+        # Basic validation
+        # ----------------------------------------------------
 
-            <input
-                type="password"
-                name="password"
-                placeholder="At least 6 characters"
-                required
-            >
+        if not full_name:
+            flash("Please enter your full name.")
+            return render_template("register.html")
+
+        if len(username) < 3:
+            flash("Username must be at least 3 characters.")
+            return render_template("register.html")
+
+        if not email:
+            flash("Please enter your email address.")
+            return render_template("register.html")
+
+        if not country:
+            flash("Please select your country.")
+            return render_template("register.html")
+
+        if not phone_code:
+            flash("Please select your country phone code.")
+            return render_template("register.html")
+
+        if not phone:
+            flash("Please enter your phone number.")
+            return render_template("register.html")
+
+        if len(password) < 6:
+            flash("Password must be at least 6 characters.")
+            return render_template("register.html")
+
+        if password != confirm_password:
+            flash("Passwords do not match.")
+            return render_template("register.html")
 
 
-            <label>
-                Confirm Password
-            </label>
+        # ----------------------------------------------------
+        # Clean phone number
+        # ----------------------------------------------------
 
-            <input
-                type="password"
-                name="confirm_password"
-                placeholder="Repeat password"
-                required
-            >
+        # Remove spaces, dashes and brackets
+        phone = (
+            phone
+            .replace(" ", "")
+            .replace("-", "")
+            .replace("(", "")
+            .replace(")", "")
+        )
+
+        # If user accidentally enters + at the beginning,
+        # remove it because the country code is added below.
+        if phone.startswith("+"):
+            phone = phone[1:]
 
 
-            <button
-                type="submit"
-                class="primary-button full-width"
-            >
-                Create Account
-            </button>
+        # Remove leading zero.
+        # Example:
+        # 0712345678 -> 712345678
+        if phone.startswith("0"):
+            phone = phone[1:]
 
-        </form>
 
-    </div>
+        # Make complete international number.
+        # Example:
+        # +254 + 712345678
+        # becomes:
+        # +254712345678
 
-</div>
+        international_phone = phone_code + phone
 
-{% endblock %}
+
+        # ----------------------------------------------------
+        # Check existing accounts
+        # ----------------------------------------------------
+
+        existing_username = User.query.filter_by(
+            username=username
+        ).first()
+
+        if existing_username:
+            flash("That username is already registered.")
+            return render_template("register.html")
+
+
+        existing_email = User.query.filter_by(
+            email=email
+        ).first()
+
+        if existing_email:
+            flash("That email address is already registered.")
+            return render_template("register.html")
+
+
+        existing_phone = User.query.filter_by(
+            phone=international_phone
+        ).first()
+
+        if existing_phone:
+            flash("That phone number is already registered.")
+            return render_template("register.html")
+
+
+        # ----------------------------------------------------
+        # Create new user
+        # ----------------------------------------------------
+
+        user = User(
+            full_name=full_name,
+            username=username,
+            email=email,
+            phone=international_phone,
+            country=country,
+            currency=currency
+        )
+
+        # Password is securely hashed by the User model.
+        user.set_password(password)
+
+
+        # ----------------------------------------------------
+        # Save account
+        # ----------------------------------------------------
+
+        try:
+
+            db.session.add(user)
+            db.session.commit()
+
+        except Exception as e:
+
+            db.session.rollback()
+
+            print("REGISTRATION ERROR:", e)
+
+            flash("Registration failed. Please try again.")
+
+            return render_template("register.html")
+
+
+        # ----------------------------------------------------
+        # Registration successful
+        # ----------------------------------------------------
+
+        flash("Account created successfully. Please log in.")
+
+        return redirect(url_for("auth.login"))
+
+
+    # GET request
+    return render_template("register.html")
+
+
+# ============================================================
+# LOGIN
+# ============================================================
+
+@auth.route("/login", methods=["GET", "POST"])
+def login():
+
+    if request.method == "POST":
+
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        user = User.query.filter_by(
+            username=username
+        ).first()
+
+        if user and user.check_password(password):
+
+            # Import here to avoid circular imports
+            from flask import session
+
+            session["user_id"] = user.id
+            session["username"] = user.username
+
+            return redirect(url_for("main.dashboard"))
+
+        flash("Invalid username or password.")
+
+    return render_template("login.html")
+
+
+# ============================================================
+# LOGOUT
+# ============================================================
+
+@auth.route("/logout")
+def logout():
+
+    from flask import session
+
+    session.clear()
+
+    flash("You have been logged out.")
+
+    return redirect(url_for("auth.login"))
