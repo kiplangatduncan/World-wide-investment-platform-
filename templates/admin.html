@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="dashboard">
+
+    <div class="dashboard-header">
+
+        <div>
+
+            <div class="eyebrow">
+                ADMINISTRATION
+            </div>
+
+            <h1>
+                Platform Control Center
+            </h1>
+
+            <p>
+                Manage platform configuration and view
+                high-level statistics.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="stats-grid">
+
+        <div class="stat-card">
+
+            <div class="stat-icon">
+                👥
+            </div>
+
+            <span>Registered users</span>
+
+            <strong>
+                {{ users_count }}
+            </strong>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-icon">
+                📊
+            </div>
+
+            <span>Investments</span>
+
+            <strong>
+                {{ investments_count }}
+            </strong>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div class="stat-icon">
+                💰
+            </div>
+
+            <span>Total invested</span>
+
+            <strong>
+                {{ "%.2f"|format(total_invested) }}
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <div class="dashboard-grid">
+
+        <section class="panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h2>Investment configuration</h2>
+
+                    <p>
+                        Configure the displayed calculation settings.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <form
+                method="POST"
+                class="form"
+            >
+
+                <label>
+                    Daily rate setting (%)
+                </label>
+
+                <input
+                    type="number"
+                    name="daily_rate"
+                    step="0.01"
+                    min="0"
+                    value="{{ settings.daily_rate }}"
+                    required
+                >
+
+
+                <label>
+                    Maturity period (days)
+                </label>
+
+                <input
+                    type="number"
+                    name="maturity_days"
+                    min="1"
+                    value="{{ settings.maturity_days }}"
+                    required
+                >
+
+
+                <button
+                    type="submit"
+                    class="primary-button"
+                >
+                    Save Configuration
+                </button>
+
+            </form>
+
+            <div class="notice">
+
+                Important: before using real customer funds,
+                ensure the investment product, return structure,
+                disclosures, licensing, KYC/AML procedures,
+                payment services and withdrawals comply with
+                the laws applicable to your business and users.
+
+            </div>
+
+        </section>
+
+
+        <section class="panel">
+
+            <h2>Platform status</h2>
+
+            <div class="detail-row">
+                <span>Platform</span>
+                <strong>GlobalVest</strong>
+            </div>
+
+            <div class="detail-row">
+                <span>Registration</span>
+                <strong class="online">
+                    ● Enabled
+                </strong>
+            </div>
+
+            <div class="detail-row">
+                <span>International currencies</span>
+                <strong>
+                    Enabled
+                </strong>
+            </div>
+
+            <div class="detail-row">
+                <span>International phone validation</span>
+                <strong>
+                    Enabled
+                </strong>
+            </div>
+
+            <div class="detail-row">
+                <span>Maturity setting</span>
+                <strong>
+                    {{ settings.maturity_days }} days
+                </strong>
+            </div>
+
+        </section>
+
+    </div>
+
+</div>
+
+{% endblock %}
