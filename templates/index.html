@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="hero">
+
+    <div class="hero-content">
+
+        <div class="eyebrow">
+            🌍 GLOBAL INVESTMENT PLATFORM
+        </div>
+
+        <h1>
+            Build your financial
+            <span>future.</span>
+        </h1>
+
+        <p>
+            Manage your investments, monitor portfolio
+            activity and track investment maturity from
+            one modern dashboard.
+        </p>
+
+        <div class="hero-buttons">
+
+            <a
+                href="{{ url_for('register') }}"
+                class="primary-button"
+            >
+                Create Account →
+            </a>
+
+            <a
+                href="{{ url_for('login') }}"
+                class="secondary-button"
+            >
+                Sign In
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <div class="hero-card">
+
+        <div class="mini-card-header">
+            <span>Portfolio overview</span>
+            <span class="live-dot">● Live</span>
+        </div>
+
+        <div class="portfolio-value">
+            $0.00
+        </div>
+
+        <div class="portfolio-label">
+            Current portfolio value
+        </div>
+
+        <div class="fake-chart">
+
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+
+        </div>
+
+        <div class="mini-stats">
+
+            <div>
+                <small>Invested</small>
+                <strong>$0.00</strong>
+            </div>
+
+            <div>
+                <small>Active plans</small>
+                <strong>0</strong>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="features">
+
+    <div class="feature-card">
+        <div class="feature-icon">🌍</div>
+        <h3>Worldwide Access</h3>
+        <p>
+            Designed for users from countries around
+            the world with international phone and
+            currency support.
+        </p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Smart Dashboard</h3>
+        <p>
+            Monitor your portfolio, investments,
+            balances and maturity information.
+        </p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">🔐</div>
+        <h3>Secure Accounts</h3>
+        <p>
+            Passwords are securely hashed and account
+            access is protected by server-side sessions.
+        </p>
+    </div>
+
+</section>
+
+{% endblock %}
