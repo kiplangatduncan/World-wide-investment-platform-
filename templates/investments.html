@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-container">
+
+    <div class="page-heading">
+
+        <div class="eyebrow">
+            PORTFOLIO
+        </div>
+
+        <h1>My Investments</h1>
+
+        <p>
+            Track your investment activity and maturity dates.
+        </p>
+
+    </div>
+
+
+    <div class="panel">
+
+        {% if investments %}
+
+        <div class="table-wrapper">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+                        <th>Reference</th>
+                        <th>Amount</th>
+                        <th>Current Value</th>
+                        <th>Maturity</th>
+                        <th>Status</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for investment in investments %}
+
+                    <tr>
+
+                        <td>
+                            <strong>
+                                {{ investment.reference }}
+                            </strong>
+                        </td>
+
+                        <td>
+                            {{ "%.2f"|format(investment.amount) }}
+                            {{ user.currency }}
+                        </td>
+
+                        <td>
+                            {{ "%.2f"|format(investment.current_value) }}
+                            {{ user.currency }}
+                        </td>
+
+                        <td>
+                            {{ investment.maturity_date.strftime("%d %b %Y") }}
+                        </td>
+
+                        <td>
+
+                            <span class="status {{ investment.status }}">
+                                {{ investment.status|capitalize }}
+                            </span>
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        {% else %}
+
+        <div class="empty-state">
+
+            <div>📊</div>
+
+            <h3>No investments</h3>
+
+            <p>
+                Your investments will appear here.
+            </p>
+
+            <a
+                href="{{ url_for('invest') }}"
+                class="primary-button"
+            >
+                Create Investment
+            </a>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}
