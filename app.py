@@ -1,8 +1,11 @@
 import os
 import uuid
+import base64
+from decimal import Decimal, InvalidOperation
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 
+import requests
 import phonenumbers
 import pycountry
 
@@ -15,49 +18,129 @@ from flask import (
     url_for,
     session,
     flash,
+    jsonify,
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
+# ============================================================
+# LOAD ENVIRONMENT
+# ============================================================
+
 load_dotenv()
+
+
+# ============================================================
+# APP
+# ============================================================
 
 app = Flask(__name__)
 
 app.config["SECRET_KEY"] = os.getenv(
     "SECRET_KEY",
-    "CHANGE-ME-IN-PRODUCTION"
+    "CHANGE-THIS-SECRET-KEY-IN-RENDER"
 )
+
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Secure cookies when deployed over HTTPS
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+if os.getenv("FLASK_ENV", "production").lower() == "production":
+    app.config["SESSION_COOKIE_SECURE"] = True
+
+
+# ============================================================
+# DATABASE
+# ============================================================
 
 database_url = os.getenv(
     "DATABASE_URL",
     "sqlite:///investment_platform.db"
 )
 
+# Render/Postgres may provide postgres://
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace(
+        "postgres://",
+        "postgresql://",
+        1
+    )
+
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
 
-# =========================================================
-# CONFIGURATION
-# =========================================================
+# ============================================================
+# PLATFORM CONFIGURATION
+# ============================================================
 
 PLATFORM_NAME = "GlobalVest"
 
-# This is deliberately configurable.
-# It should NOT be advertised as a guaranteed investment return.
-DEFAULT_DAILY_GROWTH_RATE = 2.0
+# This is a software/display setting.
+# It must NOT be presented to customers as a guaranteed return.
+DEFAULT_DAILY_GROWTH_RATE = Decimal(
+    os.getenv("DEFAULT_DAILY_GROWTH_RATE", "2.0")
+)
 
-MATURITY_DAYS = 4
+DEFAULT_MATURITY_DAYS = int(
+    os.getenv("MATURITY_DAYS", "4")
+)
+
+DEFAULT_CURRENCY = "KES"
 
 
-# =========================================================
+# ============================================================
+# MPESA CONFIGURATION
+# ============================================================
+
+MPESA_ENVIRONMENT = os.getenv(
+    "MPESA_ENVIRONMENT",
+    "sandbox"
+).lower()
+
+MPESA_CONSUMER_KEY = os.getenv(
+    "MPESA_CONSUMER_KEY",
+    ""
+)
+
+MPESA_CONSUMER_SECRET = os.getenv(
+    "MPESA_CONSUMER_SECRET",
+    ""
+)
+
+MPESA_SHORTCODE = os.getenv(
+    "MPESA_SHORTCODE",
+    ""
+)
+
+MPESA_PASSKEY = os.getenv(
+    "MPESA_PASSKEY",
+    ""
+)
+
+MPESA_CALLBACK_URL = os.getenv(
+    "MPESA_CALLBACK_URL",
+    ""
+)
+
+
+if MPESA_ENVIRONMENT == "production":
+    MPESA_BASE_URL = "https://api.safaricom.co.ke"
+else:
+    MPESA_BASE_URL = "https://sandbox.safaricom.co.ke"
+
+
+# ============================================================
 # DATABASE MODELS
-# =========================================================
+# ============================================================
 
 class User(db.Model):
+    __tablename__ = "users"
+
     id = db.Column(db.Integer, primary_key=True)
 
     public_id = db.Column(
@@ -67,23 +150,33 @@ class User(db.Model):
         default=lambda: str(uuid.uuid4())
     )
 
-    full_name = db.Column(db.String(120), nullable=False)
+    full_name = db.Column(
+        db.String(120),
+        nullable=False
+    )
 
     email = db.Column(
-        db.String(160),
+        db.String(150),
         unique=True,
         nullable=False,
         index=True
     )
 
-    phone = db.Column(db.String(40), nullable=False)
+    phone = db.Column(
+        db.String(30),
+        nullable=False
+    )
 
-    country = db.Column(db.String(100), nullable=False)
+    country = db.Column(
+        db.String(100),
+        nullable=False,
+        default="Kenya"
+    )
 
     currency = db.Column(
         db.String(10),
         nullable=False,
-        default="USD"
+        default=DEFAULT_CURRENCY
     )
 
     password_hash = db.Column(
@@ -92,19 +185,33 @@ class User(db.Model):
     )
 
     balance = db.Column(
-        db.Float,
+        db.Numeric(18, 2),
         nullable=False,
-        default=0.0
+        default=0
     )
 
     is_admin = db.Column(
         db.Boolean,
+        nullable=False,
         default=False
+    )
+
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True
     )
 
     created_at = db.Column(
         db.DateTime,
-        default=lambda: datetime.now(timezone.utc)
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    deposits = db.relationship(
+        "Deposit",
+        backref="user",
+        lazy=True
     )
 
     investments = db.relationship(
@@ -113,8 +220,22 @@ class User(db.Model):
         lazy=True
     )
 
+    withdrawals = db.relationship(
+        "Withdrawal",
+        backref="user",
+        lazy=True
+    )
+
+    transactions = db.relationship(
+        "Transaction",
+        backref="user",
+        lazy=True
+    )
+
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        self.password_hash = generate_password_hash(
+            password
+        )
 
     def check_password(self, password):
         return check_password_hash(
@@ -123,44 +244,141 @@ class User(db.Model):
         )
 
 
-class Investment(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+class Deposit(db.Model):
+    __tablename__ = "deposits"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
 
     reference = db.Column(
-        db.String(40),
+        db.String(80),
         unique=True,
-        nullable=False
+        nullable=False,
+        default=lambda: f"DEP-{uuid.uuid4().hex[:12].upper()}"
     )
 
     user_id = db.Column(
         db.Integer,
-        db.ForeignKey("user.id"),
-        nullable=False
+        db.ForeignKey("users.id"),
+        nullable=False,
+        index=True
     )
 
     amount = db.Column(
-        db.Float,
+        db.Numeric(18, 2),
         nullable=False
     )
 
+    currency = db.Column(
+        db.String(10),
+        nullable=False,
+        default="KES"
+    )
+
+    method = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="pending",
+        index=True
+    )
+
+    phone_number = db.Column(
+        db.String(30),
+        nullable=True
+    )
+
+    checkout_request_id = db.Column(
+        db.String(150),
+        unique=True,
+        nullable=True,
+        index=True
+    )
+
+    merchant_request_id = db.Column(
+        db.String(150),
+        nullable=True
+    )
+
+    mpesa_receipt = db.Column(
+        db.String(100),
+        nullable=True,
+        index=True
+    )
+
+    transaction_id = db.Column(
+        db.String(150),
+        nullable=True
+    )
+
+    external_reference = db.Column(
+        db.String(150),
+        nullable=True
+    )
+
+    admin_note = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    completed_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+
+class Investment(db.Model):
+    __tablename__ = "investments"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    public_id = db.Column(
+        db.String(36),
+        unique=True,
+        nullable=False,
+        default=lambda: str(uuid.uuid4())
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False,
+        index=True
+    )
+
+    amount = db.Column(
+        db.Numeric(18, 2),
+        nullable=False
+    )
+
+    currency = db.Column(
+        db.String(10),
+        nullable=False,
+        default="KES"
+    )
+
     daily_rate = db.Column(
-        db.Float,
+        db.Numeric(10, 4),
         nullable=False
     )
 
     maturity_days = db.Column(
         db.Integer,
-        nullable=False,
-        default=MATURITY_DAYS
-    )
-
-    start_date = db.Column(
-        db.DateTime,
-        nullable=False
-    )
-
-    maturity_date = db.Column(
-        db.DateTime,
         nullable=False
     )
 
@@ -170,252 +388,306 @@ class Investment(db.Model):
         default="active"
     )
 
-    created_at = db.Column(
+    started_at = db.Column(
         db.DateTime,
-        default=lambda: datetime.now(timezone.utc)
+        nullable=False,
+        default=datetime.utcnow
     )
 
-    @property
-    def days_elapsed(self):
-        now = datetime.now(timezone.utc)
+    maturity_date = db.Column(
+        db.DateTime,
+        nullable=False
+    )
 
-        elapsed = (now - self.start_date).total_seconds() / 86400
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
 
-        return max(
-            0,
-            min(self.maturity_days, elapsed)
-        )
 
-    @property
-    def current_value(self):
-        growth = (
-            self.amount
-            * (self.daily_rate / 100)
-            * self.days_elapsed
-        )
+class Withdrawal(db.Model):
+    __tablename__ = "withdrawals"
 
-        return self.amount + growth
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
 
-    @property
-    def projected_value(self):
-        growth = (
-            self.amount
-            * (self.daily_rate / 100)
-            * self.maturity_days
-        )
+    reference = db.Column(
+        db.String(80),
+        unique=True,
+        nullable=False,
+        default=lambda: f"WDR-{uuid.uuid4().hex[:12].upper()}"
+    )
 
-        return self.amount + growth
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False,
+        index=True
+    )
+
+    amount = db.Column(
+        db.Numeric(18, 2),
+        nullable=False
+    )
+
+    currency = db.Column(
+        db.String(10),
+        nullable=False,
+        default="KES"
+    )
+
+    method = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    destination = db.Column(
+        db.String(255),
+        nullable=False
+    )
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="pending"
+    )
+
+    admin_note = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+    processed_at = db.Column(
+        db.DateTime,
+        nullable=True
+    )
+
+
+class Transaction(db.Model):
+    __tablename__ = "transactions"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    reference = db.Column(
+        db.String(100),
+        unique=True,
+        nullable=False,
+        default=lambda: f"TX-{uuid.uuid4().hex[:14].upper()}"
+    )
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False,
+        index=True
+    )
+
+    transaction_type = db.Column(
+        db.String(40),
+        nullable=False
+    )
+
+    amount = db.Column(
+        db.Numeric(18, 2),
+        nullable=False
+    )
+
+    balance_before = db.Column(
+        db.Numeric(18, 2),
+        nullable=False
+    )
+
+    balance_after = db.Column(
+        db.Numeric(18, 2),
+        nullable=False
+    )
+
+    currency = db.Column(
+        db.String(10),
+        nullable=False,
+        default="KES"
+    )
+
+    status = db.Column(
+        db.String(30),
+        nullable=False,
+        default="completed"
+    )
+
+    description = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    external_reference = db.Column(
+        db.String(150),
+        nullable=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
+
+
+class PaymentAccount(db.Model):
+    __tablename__ = "payment_accounts"
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True
+    )
+
+    name = db.Column(
+        db.String(120),
+        nullable=False
+    )
+
+    method = db.Column(
+        db.String(50),
+        nullable=False
+    )
+
+    account_name = db.Column(
+        db.String(150),
+        nullable=True
+    )
+
+    account_number = db.Column(
+        db.String(150),
+        nullable=True
+    )
+
+    bank_name = db.Column(
+        db.String(150),
+        nullable=True
+    )
+
+    instructions = db.Column(
+        db.Text,
+        nullable=True
+    )
+
+    currency = db.Column(
+        db.String(10),
+        nullable=False,
+        default="KES"
+    )
+
+    is_active = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow
+    )
 
 
 class PlatformSetting(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    __tablename__ = "platform_settings"
 
-    daily_rate = db.Column(
-        db.Float,
-        nullable=False,
-        default=DEFAULT_DAILY_GROWTH_RATE
-    )
-
-    maturity_days = db.Column(
+    id = db.Column(
         db.Integer,
-        nullable=False,
-        default=MATURITY_DAYS
+        primary_key=True
+    )
+
+    setting_key = db.Column(
+        db.String(100),
+        unique=True,
+        nullable=False
+    )
+
+    setting_value = db.Column(
+        db.Text,
+        nullable=True
     )
 
 
-# =========================================================
-# COUNTRY / CURRENCY DATA
-# =========================================================
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
 
-def get_countries():
-    countries = []
+def utc_now():
+    return datetime.utcnow()
 
-    for country in pycountry.countries:
-        countries.append({
-            "code": country.alpha_2,
-            "name": country.name
-        })
 
-    return sorted(
-        countries,
-        key=lambda x: x["name"]
+def money(value):
+    try:
+        return Decimal(str(value)).quantize(
+            Decimal("0.01")
+        )
+    except (InvalidOperation, TypeError, ValueError):
+        return Decimal("0.00")
+
+
+def get_setting(key, default=None):
+    setting = PlatformSetting.query.filter_by(
+        setting_key=key
+    ).first()
+
+    if setting:
+        return setting.setting_value
+
+    return default
+
+
+def set_setting(key, value):
+    setting = PlatformSetting.query.filter_by(
+        setting_key=key
+    ).first()
+
+    if setting is None:
+        setting = PlatformSetting(
+            setting_key=key,
+            setting_value=str(value)
+        )
+        db.session.add(setting)
+    else:
+        setting.setting_value = str(value)
+
+    return setting
+
+
+def get_daily_rate():
+    value = get_setting(
+        "daily_growth_rate",
+        str(DEFAULT_DAILY_GROWTH_RATE)
     )
 
-
-def get_currency_codes():
-
-    return sorted([
-        "AED",
-        "AFN",
-        "ALL",
-        "AMD",
-        "ANG",
-        "AOA",
-        "ARS",
-        "AUD",
-        "AWG",
-        "AZN",
-        "BAM",
-        "BBD",
-        "BDT",
-        "BGN",
-        "BHD",
-        "BIF",
-        "BMD",
-        "BND",
-        "BOB",
-        "BRL",
-        "BSD",
-        "BTN",
-        "BWP",
-        "BYN",
-        "BZD",
-        "CAD",
-        "CDF",
-        "CHF",
-        "CLP",
-        "CNY",
-        "COP",
-        "CRC",
-        "CUP",
-        "CVE",
-        "CZK",
-        "DJF",
-        "DKK",
-        "DOP",
-        "DZD",
-        "EGP",
-        "ERN",
-        "ETB",
-        "EUR",
-        "FJD",
-        "FKP",
-        "FOK",
-        "GBP",
-        "GEL",
-        "GGP",
-        "GHS",
-        "GIP",
-        "GMD",
-        "GNF",
-        "GTQ",
-        "GYD",
-        "HKD",
-        "HNL",
-        "HRK",
-        "HTG",
-        "HUF",
-        "IDR",
-        "ILS",
-        "IMP",
-        "INR",
-        "IQD",
-        "IRR",
-        "ISK",
-        "JEP",
-        "JMD",
-        "JOD",
-        "JPY",
-        "KES",
-        "KGS",
-        "KHR",
-        "KID",
-        "KMF",
-        "KRW",
-        "KWD",
-        "KYD",
-        "KZT",
-        "LAK",
-        "LBP",
-        "LKR",
-        "LRD",
-        "LSL",
-        "LYD",
-        "MAD",
-        "MDL",
-        "MGA",
-        "MKD",
-        "MMK",
-        "MNT",
-        "MOP",
-        "MRU",
-        "MUR",
-        "MVR",
-        "MWK",
-        "MXN",
-        "MYR",
-        "MZN",
-        "NAD",
-        "NGN",
-        "NIO",
-        "NOK",
-        "NPR",
-        "NZD",
-        "OMR",
-        "PAB",
-        "PEN",
-        "PGK",
-        "PHP",
-        "PKR",
-        "PLN",
-        "PYG",
-        "QAR",
-        "RON",
-        "RSD",
-        "RUB",
-        "RWF",
-        "SAR",
-        "SBD",
-        "SCR",
-        "SDG",
-        "SEK",
-        "SGD",
-        "SHP",
-        "SLE",
-        "SLL",
-        "SOS",
-        "SRD",
-        "SSP",
-        "STN",
-        "SYP",
-        "SZL",
-        "THB",
-        "TJS",
-        "TMT",
-        "TND",
-        "TOP",
-        "TRY",
-        "TTD",
-        "TVD",
-        "TZS",
-        "UAH",
-        "UGX",
-        "USD",
-        "UYU",
-        "UZS",
-        "VED",
-        "VES",
-        "VND",
-        "VUV",
-        "WST",
-        "XAF",
-        "XCD",
-        "XOF",
-        "XPF",
-        "YER",
-        "ZAR",
-        "ZMW",
-        "ZWL"
-    ])
+    try:
+        return Decimal(str(value))
+    except InvalidOperation:
+        return DEFAULT_DAILY_GROWTH_RATE
 
 
-COUNTRIES = get_countries()
-CURRENCIES = get_currency_codes()
+def get_maturity_days():
+    value = get_setting(
+        "maturity_days",
+        str(DEFAULT_MATURITY_DAYS)
+    )
 
+    try:
+        return int(value)
+    except ValueError:
+        return DEFAULT_MATURITY_DAYS
 
-# =========================================================
-# HELPERS
-# =========================================================
 
 def current_user():
     user_id = session.get("user_id")
@@ -429,16 +701,15 @@ def current_user():
 def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
+        user = current_user()
 
-        if not session.get("user_id"):
+        if user is None or not user.is_active:
+            session.clear()
             flash(
                 "Please log in to continue.",
                 "warning"
             )
-
-            return redirect(
-                url_for("login")
-            )
+            return redirect(url_for("login"))
 
         return view(*args, **kwargs)
 
@@ -448,629 +719,312 @@ def login_required(view):
 def admin_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
-
         user = current_user()
 
-        if not user or not user.is_admin:
+        if user is None or not user.is_active:
+            session.clear()
             flash(
-                "Administrator access required.",
+                "Please log in to continue.",
+                "warning"
+            )
+            return redirect(url_for("login"))
+
+        if not user.is_admin:
+            flash(
+                "Administrator access is required.",
                 "danger"
             )
-
-            return redirect(
-                url_for("dashboard")
-            )
+            return redirect(url_for("dashboard"))
 
         return view(*args, **kwargs)
 
     return wrapped
 
 
-def get_platform_settings():
+def normalize_phone(phone, country_code="KE"):
+    phone = (phone or "").strip()
 
-    settings = PlatformSetting.query.first()
-
-    if not settings:
-
-        settings = PlatformSetting(
-            daily_rate=DEFAULT_DAILY_GROWTH_RATE,
-            maturity_days=MATURITY_DAYS
-        )
-
-        db.session.add(settings)
-        db.session.commit()
-
-    return settings
-
-
-def valid_phone(phone, country_code):
+    if not phone:
+        raise ValueError("Phone number is required.")
 
     try:
-
         parsed = phonenumbers.parse(
             phone,
             country_code
         )
 
-        return phonenumbers.is_valid_number(parsed)
+        if not phonenumbers.is_valid_number(parsed):
+            raise ValueError(
+                "Please enter a valid phone number."
+            )
 
-    except Exception:
+        return phonenumbers.format_number(
+            parsed,
+            phonenumbers.PhoneNumberFormat.E164
+        )
 
-        return False
+    except phonenumbers.NumberParseException:
+        raise ValueError(
+            "Please enter a valid phone number."
+        )
 
 
-# =========================================================
-# HOME
-# =========================================================
+def phone_to_mpesa(phone):
+    """
+    Converts E.164 phone numbers into 2547XXXXXXXX format.
+    """
 
-@app.route("/")
-def index():
-
-    user = current_user()
-
-    return render_template(
-        "index.html",
-        user=user,
-        platform_name=PLATFORM_NAME
+    cleaned = "".join(
+        character
+        for character in str(phone)
+        if character.isdigit()
     )
 
+    if cleaned.startswith("254"):
+        return cleaned
 
-# =========================================================
-# REGISTER
-# =========================================================
+    if cleaned.startswith("0"):
+        return "254" + cleaned[1:]
 
-@app.route("/register", methods=["GET", "POST"])
-def register():
+    if cleaned.startswith("7") and len(cleaned) == 9:
+        return "254" + cleaned
 
-    if request.method == "POST":
+    if cleaned.startswith("1") and len(cleaned) == 9:
+        return "254" + cleaned
 
-        full_name = request.form.get(
-            "full_name",
-            ""
-        ).strip()
+    return cleaned
 
-        email = request.form.get(
-            "email",
-            ""
-        ).strip().lower()
 
-        phone = request.form.get(
-            "phone",
-            ""
-        ).strip()
+def get_countries():
+    countries = []
 
-        country = request.form.get(
-            "country",
-            ""
-        ).strip()
-
-        currency = request.form.get(
-            "currency",
-            ""
-        ).strip().upper()
-
-        password = request.form.get(
-            "password",
-            ""
-        )
-
-        confirm_password = request.form.get(
-            "confirm_password",
-            ""
-        )
-
-        if not all([
-            full_name,
-            email,
-            phone,
+    for country in pycountry.countries:
+        name = getattr(
             country,
-            currency,
-            password
-        ]):
-
-            flash(
-                "Please complete all fields.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("register")
-            )
-
-        if len(password) < 8:
-
-            flash(
-                "Password must contain at least 8 characters.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("register")
-            )
-
-        if password != confirm_password:
-
-            flash(
-                "Passwords do not match.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("register")
-            )
-
-        existing_user = User.query.filter_by(
-            email=email
-        ).first()
-
-        if existing_user:
-
-            flash(
-                "An account with that email already exists.",
-                "warning"
-            )
-
-            return redirect(
-                url_for("login")
-            )
-
-        country_obj = next(
-            (
-                item for item in COUNTRIES
-                if item["name"] == country
-            ),
-            None
-        )
-
-        if not country_obj:
-
-            flash(
-                "Please select a valid country.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("register")
-            )
-
-        if currency not in CURRENCIES:
-
-            flash(
-                "Please select a valid currency.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("register")
-            )
-
-        if not valid_phone(
-            phone,
-            country_obj["code"]
-        ):
-
-            flash(
-                "Please enter a valid phone number.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("register")
-            )
-
-        user = User(
-            full_name=full_name,
-            email=email,
-            phone=phone,
-            country=country,
-            currency=currency
-        )
-
-        user.set_password(password)
-
-        db.session.add(user)
-        db.session.commit()
-
-        flash(
-            "Account created successfully. Please log in.",
-            "success"
-        )
-
-        return redirect(
-            url_for("login")
-        )
-
-    return render_template(
-        "register.html",
-        countries=COUNTRIES,
-        currencies=CURRENCIES,
-        platform_name=PLATFORM_NAME
-    )
-
-
-# =========================================================
-# LOGIN
-# =========================================================
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-
-    if request.method == "POST":
-
-        email = request.form.get(
-            "email",
-            ""
-        ).strip().lower()
-
-        password = request.form.get(
-            "password",
+            "name",
             ""
         )
 
-        user = User.query.filter_by(
-            email=email
-        ).first()
-
-        if not user or not user.check_password(password):
-
-            flash(
-                "Invalid email or password.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("login")
-            )
-
-        session.clear()
-
-        session["user_id"] = user.id
-
-        return redirect(
-            url_for("dashboard")
+        alpha2 = getattr(
+            country,
+            "alpha_2",
+            ""
         )
 
-    return render_template(
-        "login.html",
-        platform_name=PLATFORM_NAME
+        if name and alpha2:
+            countries.append({
+                "name": name,
+                "code": alpha2
+            })
+
+    countries.sort(
+        key=lambda item: item["name"]
     )
 
-
-# =========================================================
-# LOGOUT
-# =========================================================
-
-@app.route("/logout")
-def logout():
-
-    session.clear()
-
-    flash(
-        "You have been logged out.",
-        "success"
-    )
-
-    return redirect(
-        url_for("index")
-    )
+    return countries
 
 
-# =========================================================
-# DASHBOARD
-# =========================================================
+def supported_currencies():
+    """
+    Curated currency list for the platform interface.
 
-@app.route("/dashboard")
-@login_required
-def dashboard():
+    Availability of actual payment rails is separate from
+    displaying a currency.
+    """
 
-    user = current_user()
-
-    investments = Investment.query.filter_by(
-        user_id=user.id
-    ).order_by(
-        Investment.created_at.desc()
-    ).all()
-
-    active_investments = [
-        investment
-        for investment in investments
-        if investment.status == "active"
+    return [
+        "AED",
+        "AUD",
+        "CAD",
+        "CHF",
+        "CNY",
+        "DKK",
+        "EUR",
+        "GBP",
+        "GHS",
+        "INR",
+        "JPY",
+        "KES",
+        "NGN",
+        "NOK",
+        "RWF",
+        "SEK",
+        "TZS",
+        "UGX",
+        "USD",
+        "ZAR",
     ]
 
-    total_invested = sum(
-        investment.amount
-        for investment in investments
+
+def add_transaction(
+    user,
+    transaction_type,
+    amount,
+    balance_before,
+    balance_after,
+    description="",
+    external_reference=None,
+    status="completed"
+):
+    transaction = Transaction(
+        user_id=user.id,
+        transaction_type=transaction_type,
+        amount=money(amount),
+        balance_before=money(balance_before),
+        balance_after=money(balance_after),
+        currency=user.currency or DEFAULT_CURRENCY,
+        description=description,
+        external_reference=external_reference,
+        status=status
     )
 
-    current_value = sum(
-        investment.current_value
-        for investment in active_investments
+    db.session.add(transaction)
+
+    return transaction
+
+
+# ============================================================
+# MPESA FUNCTIONS
+# ============================================================
+
+def mpesa_credentials_ready():
+    return bool(
+        MPESA_CONSUMER_KEY
+        and MPESA_CONSUMER_SECRET
+        and MPESA_SHORTCODE
+        and MPESA_PASSKEY
     )
 
-    return render_template(
-        "dashboard.html",
-        user=user,
-        investments=investments,
-        active_investments=active_investments,
-        total_invested=total_invested,
-        current_value=current_value,
-        platform_name=PLATFORM_NAME
-    )
 
-
-# =========================================================
-# CREATE INVESTMENT
-# =========================================================
-
-@app.route("/invest", methods=["GET", "POST"])
-@login_required
-def invest():
-
-    user = current_user()
-    settings = get_platform_settings()
-
-    if request.method == "POST":
-
-        amount_text = request.form.get(
-            "amount",
-            ""
-        ).strip()
-
-        try:
-
-            amount = float(amount_text)
-
-        except ValueError:
-
-            flash(
-                "Enter a valid investment amount.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("invest")
-            )
-
-        if amount <= 0:
-
-            flash(
-                "Investment amount must be greater than zero.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("invest")
-            )
-
-        if amount > user.balance:
-
-            flash(
-                "Insufficient available balance.",
-                "danger"
-            )
-
-            return redirect(
-                url_for("invest")
-            )
-
-        now = datetime.now(timezone.utc)
-
-        investment = Investment(
-            reference="INV-" + uuid.uuid4().hex[:12].upper(),
-            user_id=user.id,
-            amount=amount,
-            daily_rate=settings.daily_rate,
-            maturity_days=settings.maturity_days,
-            start_date=now,
-            maturity_date=now + timedelta(
-                days=settings.maturity_days
-            ),
-            status="active"
+def get_mpesa_access_token():
+    if not MPESA_CONSUMER_KEY:
+        raise RuntimeError(
+            "MPESA_CONSUMER_KEY is not configured."
         )
 
-        user.balance -= amount
-
-        db.session.add(investment)
-
-        db.session.commit()
-
-        flash(
-            "Investment created successfully.",
-            "success"
+    if not MPESA_CONSUMER_SECRET:
+        raise RuntimeError(
+            "MPESA_CONSUMER_SECRET is not configured."
         )
 
-        return redirect(
-            url_for("investments")
-        )
-
-    return render_template(
-        "invest.html",
-        user=user,
-        settings=settings,
-        platform_name=PLATFORM_NAME
+    url = (
+        f"{MPESA_BASE_URL}"
+        "/oauth/v1/generate"
+        "?grant_type=client_credentials"
     )
 
-
-# =========================================================
-# INVESTMENTS
-# =========================================================
-
-@app.route("/investments")
-@login_required
-def investments():
-
-    user = current_user()
-
-    investment_list = Investment.query.filter_by(
-        user_id=user.id
-    ).order_by(
-        Investment.created_at.desc()
-    ).all()
-
-    return render_template(
-        "investments.html",
-        user=user,
-        investments=investment_list,
-        platform_name=PLATFORM_NAME
-    )
-
-
-# =========================================================
-# PROFILE
-# =========================================================
-
-@app.route("/profile")
-@login_required
-def profile():
-
-    user = current_user()
-
-    return render_template(
-        "profile.html",
-        user=user,
-        platform_name=PLATFORM_NAME
-    )
-
-
-# =========================================================
-# ADMIN
-# =========================================================
-
-@app.route("/admin", methods=["GET", "POST"])
-@admin_required
-def admin():
-
-    settings = get_platform_settings()
-
-    if request.method == "POST":
-
-        try:
-
-            daily_rate = float(
-                request.form.get(
-                    "daily_rate",
-                    settings.daily_rate
-                )
-            )
-
-            maturity_days = int(
-                request.form.get(
-                    "maturity_days",
-                    settings.maturity_days
-                )
-            )
-
-            if daily_rate < 0:
-
-                raise ValueError()
-
-            if maturity_days < 1:
-
-                raise ValueError()
-
-            settings.daily_rate = daily_rate
-            settings.maturity_days = maturity_days
-
-            db.session.commit()
-
-            flash(
-                "Platform settings updated.",
-                "success"
-            )
-
-        except ValueError:
-
-            flash(
-                "Please enter valid settings.",
-                "danger"
-            )
-
-        return redirect(
-            url_for("admin")
-        )
-
-    users_count = User.query.count()
-
-    investments_count = Investment.query.count()
-
-    total_invested = db.session.query(
-        db.func.sum(Investment.amount)
-    ).scalar() or 0
-
-    return render_template(
-        "admin.html",
-        settings=settings,
-        users_count=users_count,
-        investments_count=investments_count,
-        total_invested=total_invested,
-        platform_name=PLATFORM_NAME
-    )
-
-
-# =========================================================
-# DATABASE INITIALIZATION
-# =========================================================
-
-with app.app_context():
-
-    db.create_all()
-
-    settings = PlatformSetting.query.first()
-
-    if not settings:
-
-        settings = PlatformSetting(
-            daily_rate=DEFAULT_DAILY_GROWTH_RATE,
-            maturity_days=MATURITY_DAYS
-        )
-
-        db.session.add(settings)
-
-    admin_email = os.getenv(
-        "ADMIN_EMAIL"
-    )
-
-    admin_password = os.getenv(
-        "ADMIN_PASSWORD"
-    )
-
-    if admin_email and admin_password:
-
-        admin = User.query.filter_by(
-            email=admin_email.lower()
-        ).first()
-
-        if not admin:
-
-            admin = User(
-                full_name="Platform Administrator",
-                email=admin_email.lower(),
-                phone="",
-                country="",
-                currency="USD",
-                is_admin=True
-            )
-
-            admin.set_password(admin_password)
-
-            db.session.add(admin)
-
-    db.session.commit()
-
-
-# =========================================================
-# RUN
-# =========================================================
-
-if __name__ == "__main__":
-
-    app.run(
-        host="0.0.0.0",
-        port=int(
-            os.environ.get(
-                "PORT",
-                5000
-            )
+    response = requests.get(
+        url,
+        auth=(
+            MPESA_CONSUMER_KEY,
+            MPESA_CONSUMER_SECRET
         ),
-        debug=False
-      )
+        timeout=30
+    )
+
+    response.raise_for_status()
+
+    data = response.json()
+
+    token = data.get("access_token")
+
+    if not token:
+        raise RuntimeError(
+            "M-Pesa did not return an access token."
+        )
+
+    return token
+
+
+def create_mpesa_password(timestamp):
+    raw = (
+        f"{MPESA_SHORTCODE}"
+        f"{MPESA_PASSKEY}"
+        f"{timestamp}"
+    )
+
+    encoded = base64.b64encode(
+        raw.encode("utf-8")
+    ).decode("utf-8")
+
+    return encoded
+
+
+def initiate_mpesa_stk(
+    phone_number,
+    amount,
+    account_reference,
+    transaction_description
+):
+    if not mpesa_credentials_ready():
+        raise RuntimeError(
+            "M-Pesa is not fully configured. "
+            "Add the Daraja credentials in Render Environment Variables."
+        )
+
+    if not MPESA_CALLBACK_URL:
+        raise RuntimeError(
+            "MPESA_CALLBACK_URL is not configured."
+        )
+
+    token = get_mpesa_access_token()
+
+    timestamp = datetime.now(
+        timezone.utc
+    ).strftime("%Y%m%d%H%M%S")
+
+    password = create_mpesa_password(
+        timestamp
+    )
+
+    mpesa_phone = phone_to_mpesa(
+        phone_number
+    )
+
+    payload = {
+        "BusinessShortCode": MPESA_SHORTCODE,
+        "Password": password,
+        "Timestamp": timestamp,
+        "TransactionType": "CustomerPayBillOnline",
+        "Amount": str(int(money(amount))),
+        "PartyA": mpesa_phone,
+        "PartyB": MPESA_SHORTCODE,
+        "PhoneNumber": mpesa_phone,
+        "CallBackURL": MPESA_CALLBACK_URL,
+        "AccountReference": account_reference,
+        "TransactionDesc": transaction_description,
+    }
+
+    url = (
+        f"{MPESA_BASE_URL}"
+        "/mpesa/stkpush/v1/processrequest"
+    )
+
+    response = requests.post(
+        url,
+        json=payload,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        timeout=30
+    )
+
+    response.raise_for_status()
+
+    return response.json()
+
+
+# ============================================================
+# TEMPLATE GLOBALS
+# ============================================================
+
+@app.context_processor
+def inject_globals():
+    user = current_user()
+
+    return {
+        "platform_name": PLATFORM_NAME,
+        "current_user": user,
+        "daily_rate": get_daily_rate(),
+        "maturity_days": get_mat
