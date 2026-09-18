@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-container">
+
+    <div class="page-heading">
+
+        <div class="eyebrow">
+            ACCOUNT
+        </div>
+
+        <h1>Profile</h1>
+
+        <p>
+            Your GlobalVest account information.
+        </p>
+
+    </div>
+
+
+    <div class="profile-grid">
+
+        <div class="panel profile-card">
+
+            <div class="profile-avatar">
+                {{ user.full_name[0]|upper }}
+            </div>
+
+            <h2>
+                {{ user.full_name }}
+            </h2>
+
+            <p>
+                {{ user.email }}
+            </p>
+
+        </div>
+
+
+        <div class="panel">
+
+            <h2>Account details</h2>
+
+            <div class="detail-row">
+                <span>Full name</span>
+                <strong>{{ user.full_name }}</strong>
+            </div>
+
+            <div class="detail-row">
+                <span>Email</span>
+                <strong>{{ user.email }}</strong>
+            </div>
+
+            <div class="detail-row">
+                <span>Phone</span>
+                <strong>{{ user.phone }}</strong>
+            </div>
+
+            <div class="detail-row">
+                <span>Country</span>
+                <strong>{{ user.country }}</strong>
+            </div>
+
+            <div class="detail-row">
+                <span>Currency</span>
+                <strong>{{ user.currency }}</strong>
+            </div>
+
+            <div class="detail-row">
+                <span>Account created</span>
+                <strong>
+                    {{ user.created_at.strftime("%d %b %Y") }}
+                </strong>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
