@@ -1,116 +1,83 @@
-{% extends "base.html" %}
+@login_required
+def invest():
 
-{% block content %}
+    user = current_user()
 
-<div class="page-container">
+    if request.method == "POST":
 
-    <div class="page-heading">
+        amount = money(
+            request.form.get(
+                "amount",
+                "0"
+            )
+        )
 
-        <div class="eyebrow">
-            INVESTMENT PLAN
-        </div>
+        if amount <= Decimal("0.00"):
+            flash(
+                "Enter a valid investment amount.",
+                "danger"
+            )
 
-        <h1>Create an investment</h1>
+            return render_template(
+                "invest.html",
+                user=user
+            )
 
-        <p>
-            Choose the amount you would like to allocate.
-        </p>
+        if money(user.balance) < amount:
+            flash(
+                "Insufficient wallet balance.",
+                "danger"
+            )
 
-    </div>
+            return render_template(
+                "invest.html",
+                user=user
+            )
 
+        rate = get_daily_rate()
 
-    <div class="invest-layout">
+        start_date = utc_now()
 
-        <div class="panel">
+        maturity_date = (
+            start_date
+            + timedelta(days=MATURITY_DAYS)
+        )
 
-            <h2>Investment amount</h2>
+        investment = Investment(
+            user_id=user.id,
+            amount=amount,
+            daily_rate=rate,
+            start_date=start_date,
+            maturity_date=maturity_date,
+            status="active"
+        )
 
-            <p class="muted">
-                Available balance:
-                <strong>
-                    {{ "%.2f"|format(user.balance) }}
-                    {{ user.currency }}
-                </strong>
-            </p>
+        user.balance = (
+            money(user.balance)
+            - amount
+        )
 
+        db.session.add(investment)
 
-            <form
-                method="POST"
-                class="form"
-            >
+        create_transaction(
+            user,
+            "investment",
+            -amount,
+            "Investment created"
+        )
 
-                <label>
-                    Amount
-                </label>
+        db.session.commit()
 
-                <div class="amount-input">
+        flash(
+            "Your investment has been created successfully.",
+            "success"
+        )
 
-                    <span>
-                        {{ user.currency }}
-                    </span>
+        return redirect(
+            url_for("investments")
+        )
 
-                    <input
-                        type="number"
-                        name="amount"
-                        step="0.01"
-                        min="0.01"
-                        placeholder="0.00"
-                        required
-                    >
-
-                </div>
-
-
-                <button
-                    type="submit"
-                    class="primary-button full"
-                >
-                    Continue
-                </button>
-
-            </form>
-
-        </div>
-
-
-        <div class="plan-card">
-
-            <div class="plan-badge">
-                CURRENT PLAN
-            </div>
-
-            <h2>
-                4-Day Investment
-            </h2>
-
-            <div class="plan-duration">
-                {{ settings.maturity_days }} days
-            </div>
-
-            <div class="plan-detail">
-                <span>Daily rate setting</span>
-                <strong>
-                    {{ settings.daily_rate }}%
-                </strong>
-            </div>
-
-            <div class="plan-detail">
-                <span>Maturity</span>
-                <strong>
-                    {{ settings.maturity_days }} days
-                </strong>
-            </div>
-
-            <div class="notice">
-                Growth figures are calculated according to
-                the platform configuration and should not be
-                interpreted as a guaranteed investment return.
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-{% endblock %}
+    return render_template(
+        "invest.html",
+        user=user
+    )
