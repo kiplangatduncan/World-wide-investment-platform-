@@ -1052,7 +1052,7 @@ def initiate_mpesa_stk(
         "Content-Type": "application/json",
     }
 
-    try:
+        try:
         response = requests.post(
             url,
             json=payload,
@@ -1069,4 +1069,34 @@ def initiate_mpesa_stk(
             return {
                 "success": True,
                 "data": data,
-    }
+            }
+
+        return {
+            "success": False,
+            "message": data.get(
+                "errorMessage",
+                data.get(
+                    "ResponseDescription",
+                    "M-Pesa request failed."
+                )
+            ),
+            "data": data,
+        }
+
+    except requests.exceptions.RequestException as e:
+        return {
+            "success": False,
+            "message": f"M-Pesa connection error: {str(e)}",
+        }
+
+    except ValueError:
+        return {
+            "success": False,
+            "message": "M-Pesa returned an invalid response.",
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"M-Pesa error: {str(e)}",
+        }
