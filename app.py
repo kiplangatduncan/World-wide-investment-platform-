@@ -549,38 +549,46 @@ def create_transaction(
 
     return transaction
 
-
-@login_required
-@login_required
+  @app.route("/invest", methods=["GET", "POST"])
 def invest():
+
     user = current_user()
 
     if request.method == "POST":
+
         amount = money(
-            request.form.get("amount", "0")
+            request.form.get(
+                "amount",
+                "0"
+            )
         )
 
         if amount <= Decimal("0.00"):
+
             flash(
                 "Enter a valid investment amount.",
                 "danger"
             )
+
             return render_template(
                 "invest.html",
                 user=user
             )
 
         if money(user.balance) < amount:
+
             flash(
                 "Insufficient wallet balance.",
                 "danger"
             )
+
             return render_template(
                 "invest.html",
                 user=user
             )
 
         rate = get_daily_rate()
+
         start_date = utc_now()
 
         maturity_date = (
@@ -598,10 +606,13 @@ def invest():
         )
 
         user.balance = (
-            money(user.balance) - amount
+            money(user.balance)
+            - amount
         )
 
-        db.session.add(investment)
+        db.session.add(
+            investment
+        )
 
         create_transaction(
             user,
