@@ -1,4 +1,4 @@
-import os
+aimport os
 import uuid
 import base64
 from decimal import Decimal, InvalidOperation
@@ -824,10 +824,51 @@ MPESA_PASSKEY = os.getenv(
     ""
 )
 
-MPESA_CALLBACK_URL = os.getenv(
-    "MPESA_CALLBACK_URL",
-    ""
-)
+def initiate_stk_push(phone, amount, account_reference="GlobalVest"):
+    if not MPESA_CALLBACK_URL:
+        return {
+            "success": False,
+            "message": "M-Pesa callback URL is not configured."
+        }
+
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+
+    password = mpesa_password(timestamp)
+
+    payload = {
+        "BusinessShortCode": MPESA_SHORTCODE,
+        "Password": password,
+        "Timestamp": timestamp,
+        "TransactionType": "CustomerPayBillOnline",
+        "Amount": int(amount),
+        "PartyA": phone,
+        "PartyB": MPESA_SHORTCODE,
+        "PhoneNumber": phone,
+        "CallBackURL": MPESA_CALLBACK_URL,
+        "AccountReference": account_reference,
+        "TransactionDesc": "GlobalVest Investment"
+    }
+
+    headers = {
+        "Authorization": f"Bearer {get_mpesa_token()}",
+        "Content-Type": "application/json"
+    }
+
+    try:
+        response = requests.post(
+            MPESA_STK_URL,
+            json=payload,
+            headers=headers,
+            timeout=30
+        )
+
+        return response.json()
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": str(e)
+    }
 
 
 def mpesa_base_url():
