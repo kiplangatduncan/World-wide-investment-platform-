@@ -2,258 +2,338 @@
 
 {% block content %}
 
-<div class="dashboard">
+<div class="dashboard"><div class="dashboard-header">
 
-    <div class="dashboard-header">
-
-        <div>
-
-            <div class="eyebrow">
-                ACCOUNT OVERVIEW
-            </div>
-
-            <h1>
-                Welcome back, {{ user.full_name.split()[0] }}
-            </h1>
-
-            <p>
-                Here's what's happening with your portfolio.
-            </p>
-
+    <div>
+        <div class="eyebrow">
+            ACCOUNT OVERVIEW
         </div>
 
-        <a
-            href="{{ url_for('invest') }}"
-            class="primary-button"
-        >
-            + New Investment
-        </a>
+        <h1>
+            Welcome back, {{ user.full_name.split()[0] }}
+        </h1>
+
+        <p>
+            Here's what's happening with your portfolio.
+        </p>
+    </div>
+
+    <a
+        href="{{ url_for('invest') }}"
+        class="primary-button"
+    >
+        + New Investment
+    </a>
+
+</div>
+
+
+<!-- PORTFOLIO STATISTICS -->
+
+<div class="stats-grid">
+
+    <!-- Available Balance -->
+
+    <div class="stat-card main-stat">
+
+        <div class="stat-icon">
+            💰
+        </div>
+
+        <span>Available Balance</span>
+
+        <strong>
+            {{ "%.2f"|format(user.balance|default(0)) }}
+            {{ user.currency|default("USD") }}
+        </strong>
+
+        <small>
+            Available to invest
+        </small>
 
     </div>
 
 
-    <div class="stats-grid">
+    <!-- Total Invested -->
 
-        <div class="stat-card main-stat">
+    <div class="stat-card">
 
-            <div class="stat-icon">
-                💰
-            </div>
-
-            <span>Available Balance</span>
-
-            <strong>
-                {{ "%.2f"|format(user.balance) }}
-                {{ user.currency }}
-            </strong>
-
-            <small>
-                Available to invest
-            </small>
-
+        <div class="stat-icon">
+            📊
         </div>
 
+        <span>Total Invested</span>
 
-        <div class="stat-card">
+        <strong>
+            {{ "%.2f"|format(total_invested|default(0)) }}
+            {{ user.currency|default("USD") }}
+        </strong>
 
-            <div class="stat-icon">
-                📊
-            </div>
-
-            <span>Total Invested</span>
-
-            <strong>
-                {{ "%.2f"|format(total_invested) }}
-                {{ user.currency }}
-            </strong>
-
-            <small>
-                Across all investments
-            </small>
-
-        </div>
-
-
-        <div class="stat-card">
-
-            <div class="stat-icon">
-                📈
-            </div>
-
-            <span>Current Value</span>
-
-            <strong>
-                {{ "%.2f"|format(current_value) }}
-                {{ user.currency }}
-            </strong>
-
-            <small>
-                Based on current progress
-            </small>
-
-        </div>
-
-
-        <div class="stat-card">
-
-            <div class="stat-icon">
-                🌍
-            </div>
-
-            <span>Country</span>
-
-            <strong class="country-value">
-                {{ user.country }}
-            </strong>
-
-            <small>
-                {{ user.currency }}
-            </small>
-
-        </div>
+        <small>
+            Across all investments
+        </small>
 
     </div>
 
 
-    <div class="dashboard-grid">
+    <!-- Current Value -->
+
+    <div class="stat-card">
+
+        <div class="stat-icon">
+            📈
+        </div>
+
+        <span>Current Value</span>
+
+        <strong>
+            {{ "%.2f"|format(current_value|default(0)) }}
+            {{ user.currency|default("USD") }}
+        </strong>
+
+        <small>
+            Based on current progress
+        </small>
+
+    </div>
 
 
-        <section class="panel large-panel">
+    <!-- Country -->
 
-            <div class="panel-header">
+    <div class="stat-card">
 
-                <div>
-                    <h2>Portfolio activity</h2>
-                    <p>Your recent investment activity</p>
-                </div>
+        <div class="stat-icon">
+            🌍
+        </div>
 
-                <a href="{{ url_for('investments') }}">
-                    View all →
-                </a>
+        <span>Country</span>
 
-            </div>
+        <strong class="country-value">
+            {{ user.country|default("Not selected") }}
+        </strong>
 
-
-            {% if investments %}
-
-                <div class="investment-list">
-
-                    {% for investment in investments[:5] %}
-
-                    <div class="investment-row">
-
-                        <div class="investment-icon">
-                            ↗
-                        </div>
-
-                        <div class="investment-info">
-
-                            <strong>
-                                {{ investment.reference }}
-                            </strong>
-
-                            <small>
-                                {{ investment.start_date.strftime("%d %b %Y") }}
-                            </small>
-
-                        </div>
-
-                        <div class="investment-amount">
-
-                            <strong>
-                                {{ "%.2f"|format(investment.amount) }}
-                                {{ user.currency }}
-                            </strong>
-
-                            <small>
-                                {{ investment.status|capitalize }}
-                            </small>
-
-                        </div>
-
-                    </div>
-
-                    {% endfor %}
-
-                </div>
-
-            {% else %}
-
-                <div class="empty-state">
-
-                    <div>
-                        📊
-                    </div>
-
-                    <h3>
-                        No investments yet
-                    </h3>
-
-                    <p>
-                        Your investment activity will appear here.
-                    </p>
-
-                    <a
-                        href="{{ url_for('invest') }}"
-                        class="primary-button"
-                    >
-                        Start Investing
-                    </a>
-
-                </div>
-
-            {% endif %}
-
-        </section>
-
-
-        <section class="panel">
-
-            <div class="panel-header">
-
-                <div>
-                    <h2>Quick actions</h2>
-                    <p>Manage your account</p>
-                </div>
-
-            </div>
-
-
-            <div class="quick-actions">
-
-                <a href="{{ url_for('invest') }}">
-                    <span>💼</span>
-                    <div>
-                        <strong>Invest</strong>
-                        <small>Create an investment</small>
-                    </div>
-                    →
-                </a>
-
-                <a href="{{ url_for('investments') }}">
-                    <span>📋</span>
-                    <div>
-                        <strong>Investments</strong>
-                        <small>View your plans</small>
-                    </div>
-                    →
-                </a>
-
-                <a href="{{ url_for('profile') }}">
-                    <span>👤</span>
-                    <div>
-                        <strong>Profile</strong>
-                        <small>Account information</small>
-                    </div>
-                    →
-                </a>
-
-            </div>
-
-        </section>
+        <small>
+            {{ user.currency|default("USD") }}
+        </small>
 
     </div>
 
 </div>
 
-{% endblock %}
+
+<!-- MAIN DASHBOARD -->
+
+<div class="dashboard-grid">
+
+
+    <!-- PORTFOLIO ACTIVITY -->
+
+    <section class="panel large-panel">
+
+        <div class="panel-header">
+
+            <div>
+
+                <h2>
+                    Portfolio activity
+                </h2>
+
+                <p>
+                    Your recent investment activity
+                </p>
+
+            </div>
+
+            <a href="{{ url_for('investments') }}">
+                View all →
+            </a>
+
+        </div>
+
+
+        {% if investments %}
+
+            <div class="investment-list">
+
+                {% for investment in investments[:5] %}
+
+                <div class="investment-row">
+
+                    <div class="investment-icon">
+                        ↗
+                    </div>
+
+
+                    <div class="investment-info">
+
+                        <strong>
+                            {{ investment.reference }}
+                        </strong>
+
+                        <small>
+
+                            {% if investment.start_date %}
+
+                                {{ investment.start_date.strftime("%d %b %Y") }}
+
+                            {% else %}
+
+                                Date unavailable
+
+                            {% endif %}
+
+                        </small>
+
+                    </div>
+
+
+                    <div class="investment-amount">
+
+                        <strong>
+                            {{ "%.2f"|format(investment.amount|default(0)) }}
+                            {{ user.currency|default("USD") }}
+                        </strong>
+
+                        <small>
+                            {{ investment.status|default("Pending")|capitalize }}
+                        </small>
+
+                    </div>
+
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+
+        {% else %}
+
+            <div class="empty-state">
+
+                <div>
+                    📊
+                </div>
+
+                <h3>
+                    No investments yet
+                </h3>
+
+                <p>
+                    Your investment activity will appear here.
+                </p>
+
+                <a
+                    href="{{ url_for('invest') }}"
+                    class="primary-button"
+                >
+                    Start Investing
+                </a>
+
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <!-- QUICK ACTIONS -->
+
+    <section class="panel">
+
+        <div class="panel-header">
+
+            <div>
+
+                <h2>
+                    Quick actions
+                </h2>
+
+                <p>
+                    Manage your account
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="quick-actions">
+
+
+            <a href="{{ url_for('invest') }}">
+
+                <span>
+                    💼
+                </span>
+
+                <div>
+
+                    <strong>
+                        Invest
+                    </strong>
+
+                    <small>
+                        Create an investment
+                    </small>
+
+                </div>
+
+                →
+
+            </a>
+
+
+            <a href="{{ url_for('investments') }}">
+
+                <span>
+                    📋
+                </span>
+
+                <div>
+
+                    <strong>
+                        Investments
+                    </strong>
+
+                    <small>
+                        View your plans
+                    </small>
+
+                </div>
+
+                →
+
+            </a>
+
+
+            <a href="{{ url_for('profile') }}">
+
+                <span>
+                    👤
+                </span>
+
+                <div>
+
+                    <strong>
+                        Profile
+                    </strong>
+
+                    <small>
+                        Account information
+                    </small>
+
+                </div>
+
+                →
+
+            </a>
+
+
+        </div>
+
+    </section>
+
+</div>
+
+</div>{% endblock %}
