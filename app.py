@@ -1050,9 +1050,8 @@ def initiate_mpesa_stk(
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
-    }
-
-        try:
+    } 
+    try:
         response = requests.post(
             url,
             json=payload,
