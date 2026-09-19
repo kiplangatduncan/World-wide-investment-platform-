@@ -550,6 +550,7 @@ def create_transaction(
     return transaction
 
   @app.route("/invest", methods=["GET", "POST"])
+@app.route("/invest", methods=["GET", "POST"])
 def invest():
 
     user = current_user()
