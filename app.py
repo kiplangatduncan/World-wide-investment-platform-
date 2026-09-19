@@ -1,4 +1,4 @@
-import os
+aimport os
 import uuid
 import base64
 from decimal import Decimal, InvalidOperation
@@ -1033,8 +1033,7 @@ def initiate_mpesa_stk(
     password = mpesa_password(
         timestamp
     )
-
-         payload = {
+    payload = {
         "BusinessShortCode": MPESA_SHORTCODE,
         "Password": password,
         "Timestamp": timestamp,
