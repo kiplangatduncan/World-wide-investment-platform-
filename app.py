@@ -1047,10 +1047,11 @@ def initiate_mpesa_stk(
         "TransactionDesc": "GlobalVest Deposit",
     }
 
-    headers = {
+        headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
-    } 
+    }
+
     try:
         response = requests.post(
             url,
