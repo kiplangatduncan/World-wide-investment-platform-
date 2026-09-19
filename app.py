@@ -455,7 +455,7 @@ class PlatformSetting(db.Model):
 # PART 2 — HELPERS, AUTHENTICATION & M-PESA
 # ============================================================
 
-  def get_setting(key, default=None):
+def get_setting(key, default=None):
     setting = PlatformSetting.query.filter_by(key=key).first()
 
     if setting:
