@@ -1389,11 +1389,12 @@ def investments():
             "profit": profit,
             "total_value": total_value
         })
-
- return render_template(
-    "invest.html",
-    user=user
- )
+    return render_template(
+        "investments.html",
+        user=user,
+        investments=investment_data
+      )
+ 
 
 
 # ============================================================
