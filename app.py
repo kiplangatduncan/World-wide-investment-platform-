@@ -550,45 +550,93 @@ def create_transaction(
     return transaction
 
 
-def login_required(view):
-    @wraps(view)
-    def wrapped(*args, **kwargs):
+@login_required
+def invest():
 
-        user_id = session.get("user_id")
+    user = current_user()
 
-        if not user_id:
-            flash(
-                "Please log in to continue.",
-                "warning"
+    if request.method == "POST":
+
+        amount = money(
+            request.form.get(
+                "amount",
+                "0"
             )
+        )
 
-            return redirect(url_for("login"))
-
-        user = db.session.get(User, user_id)
-
-        if not user:
-            session.clear()
+        if amount <= Decimal("0.00"):
 
             flash(
-                "Your account could not be found.",
+                "Enter a valid investment amount.",
                 "danger"
             )
 
-            return redirect(url_for("login"))
+            return render_template(
+                "invest.html",
+                user=user
+            )
 
-        if not user.is_active:
-            session.clear()
+        if money(user.balance) < amount:
 
             flash(
-                "Your account has been disabled.",
+                "Insufficient wallet balance.",
                 "danger"
             )
 
-            return redirect(url_for("login"))
+            return render_template(
+                "invest.html",
+                user=user
+            )
 
-        return view(*args, **kwargs)
+        rate = get_daily_rate()
 
-    return wrapped
+        start_date = utc_now()
+
+        maturity_date = (
+            start_date
+            + timedelta(days=MATURITY_DAYS)
+        )
+
+        investment = Investment(
+            user_id=user.id,
+            amount=amount,
+            daily_rate=rate,
+            start_date=start_date,
+            maturity_date=maturity_date,
+            status="active"
+        )
+
+        user.balance = (
+            money(user.balance)
+            - amount
+        )
+
+        db.session.add(
+            investment
+        )
+
+        create_transaction(
+            user,
+            "investment",
+            -amount,
+            "Investment created"
+        )
+
+        db.session.commit()
+
+        flash(
+            "Your investment has been created successfully.",
+            "success"
+        )
+
+        return redirect(
+            url_for("investments")
+        )
+
+    return render_template(
+        "invest.html",
+        user=user
+    )
 
 
 def admin_required(view):
