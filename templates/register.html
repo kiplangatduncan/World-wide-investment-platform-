@@ -2,148 +2,167 @@
 
 {% block content %}
 
-<div class="auth-page">
+<div class="auth-page"><div class="auth-card">
 
-    <div class="auth-card">
+    <div class="auth-header">
 
-        <div class="auth-header">
-
-            <div class="auth-logo">
-                G
-            </div>
-
-            <h1>Create your account</h1>
-
-            <p>
-                Join the GlobalVest platform
-            </p>
-
+        <div class="auth-logo">
+            G
         </div>
 
+        <h1>Create your account</h1>
 
-        <form
-            method="POST"
-            class="form"
-        >
-
-            <label>Full name</label>
-
-            <input
-                type="text"
-                name="full_name"
-                placeholder="Your full name"
-                required
-            >
-
-
-            <label>Email address</label>
-
-            <input
-                type="email"
-                name="email"
-                placeholder="you@example.com"
-                required
-            >
-
-
-            <label>Country</label>
-
-            <select
-                name="country"
-                required
-            >
-
-                <option value="">
-                    Select your country
-                </option>
-
-                {% for country in countries %}
-
-                    <option value="{{ country.name }}">
-                        {{ country.name }}
-                    </option>
-
-                {% endfor %}
-
-            </select>
-
-
-            <label>Phone number</label>
-
-            <input
-                type="tel"
-                name="phone"
-                placeholder="+254 700 000000"
-                required
-            >
-
-            <small class="input-help">
-                Use your international phone number.
-            </small>
-
-
-            <label>Preferred currency</label>
-
-            <select
-                name="currency"
-                required
-            >
-
-                {% for currency in currencies %}
-
-                    <option value="{{ currency }}">
-                        {{ currency }}
-                    </option>
-
-                {% endfor %}
-
-            </select>
-
-
-            <label>Password</label>
-
-            <input
-                type="password"
-                name="password"
-                minlength="8"
-                placeholder="Minimum 8 characters"
-                required
-            >
-
-
-            <label>Confirm password</label>
-
-            <input
-                type="password"
-                name="confirm_password"
-                minlength="8"
-                placeholder="Repeat your password"
-                required
-            >
-
-
-            <button
-                type="submit"
-                class="primary-button full"
-            >
-                Create Account
-            </button>
-
-        </form>
-
-
-        <p class="auth-bottom">
-
-            Already have an account?
-
-            <a href="{{ url_for('login') }}">
-                Sign in
-            </a>
-
+        <p>
+            Join the GlobalVest platform
         </p>
 
     </div>
 
+    <form method="POST" class="form">
+
+        <label>Full name</label>
+
+        <input
+            type="text"
+            name="full_name"
+            placeholder="Your full name"
+            required
+        >
+
+        <label>Email address</label>
+
+        <input
+            type="email"
+            name="email"
+            placeholder="you@example.com"
+            required
+        >
+
+        <label>Country</label>
+
+        <select name="country" id="country" required>
+
+            <option value="">
+                Select your country
+            </option>
+
+            <option value="Kenya">🇰🇪 Kenya</option>
+            <option value="Uganda">🇺🇬 Uganda</option>
+            <option value="Tanzania">🇹🇿 Tanzania</option>
+            <option value="Rwanda">🇷🇼 Rwanda</option>
+            <option value="Nigeria">🇳🇬 Nigeria</option>
+            <option value="South Africa">🇿🇦 South Africa</option>
+            <option value="Ghana">🇬🇭 Ghana</option>
+            <option value="Ethiopia">🇪🇹 Ethiopia</option>
+            <option value="United States">🇺🇸 United States</option>
+            <option value="Canada">🇨🇦 Canada</option>
+            <option value="United Kingdom">🇬🇧 United Kingdom</option>
+            <option value="Australia">🇦🇺 Australia</option>
+            <option value="New Zealand">🇳🇿 New Zealand</option>
+            <option value="Germany">🇩🇪 Germany</option>
+            <option value="France">🇫🇷 France</option>
+            <option value="Italy">🇮🇹 Italy</option>
+            <option value="Spain">🇪🇸 Spain</option>
+            <option value="Netherlands">🇳🇱 Netherlands</option>
+            <option value="Switzerland">🇨🇭 Switzerland</option>
+            <option value="United Arab Emirates">🇦🇪 United Arab Emirates</option>
+            <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
+            <option value="India">🇮🇳 India</option>
+            <option value="China">🇨🇳 China</option>
+            <option value="Japan">🇯🇵 Japan</option>
+            <option value="South Korea">🇰🇷 South Korea</option>
+            <option value="Singapore">🇸🇬 Singapore</option>
+            <option value="Malaysia">🇲🇾 Malaysia</option>
+            <option value="Brazil">🇧🇷 Brazil</option>
+            <option value="Mexico">🇲🇽 Mexico</option>
+
+        </select>
+
+        <label>Phone number</label>
+
+        <input
+            type="tel"
+            name="phone"
+            placeholder="+254 700 000000"
+            required
+        >
+
+        <small class="input-help">
+            Use your international phone number.
+        </small>
+
+        <label>Preferred currency</label>
+
+        <select name="currency" id="currency" required>
+
+            <option value="">
+                Select your currency
+            </option>
+
+            <option value="KES">KES — Kenyan Shilling</option>
+            <option value="UGX">UGX — Ugandan Shilling</option>
+            <option value="TZS">TZS — Tanzanian Shilling</option>
+            <option value="RWF">RWF — Rwandan Franc</option>
+            <option value="NGN">NGN — Nigerian Naira</option>
+            <option value="ZAR">ZAR — South African Rand</option>
+            <option value="GHS">GHS — Ghanaian Cedi</option>
+            <option value="USD">USD — US Dollar</option>
+            <option value="CAD">CAD — Canadian Dollar</option>
+            <option value="GBP">GBP — British Pound</option>
+            <option value="EUR">EUR — Euro</option>
+            <option value="CHF">CHF — Swiss Franc</option>
+            <option value="AUD">AUD — Australian Dollar</option>
+            <option value="AED">AED — UAE Dirham</option>
+            <option value="SAR">SAR — Saudi Riyal</option>
+            <option value="INR">INR — Indian Rupee</option>
+            <option value="CNY">CNY — Chinese Yuan</option>
+            <option value="JPY">JPY — Japanese Yen</option>
+            <option value="SGD">SGD — Singapore Dollar</option>
+            <option value="MYR">MYR — Malaysian Ringgit</option>
+            <option value="BRL">BRL — Brazilian Real</option>
+            <option value="MXN">MXN — Mexican Peso</option>
+
+        </select>
+
+        <label>Password</label>
+
+        <input
+            type="password"
+            name="password"
+            minlength="8"
+            placeholder="Minimum 8 characters"
+            required
+        >
+
+        <label>Confirm password</label>
+
+        <input
+            type="password"
+            name="confirm_password"
+            minlength="8"
+            placeholder="Repeat your password"
+            required
+        >
+
+        <button
+            type="submit"
+            class="primary-button full"
+        >
+            Create Account
+        </button>
+
+    </form>
+
+    <p class="auth-bottom">
+
+        Already have an account?
+
+        <a href="{{ url_for('login') }}">
+            Sign in
+        </a>
+
+    </p>
+
 </div>
 
-{% endblock %}
+</div>{% endblock %}
