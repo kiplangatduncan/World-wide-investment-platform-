@@ -1034,7 +1034,7 @@ def initiate_mpesa_stk(
         timestamp
     )
 
-     payload = {
+         payload = {
         "BusinessShortCode": MPESA_SHORTCODE,
         "Password": password,
         "Timestamp": timestamp,
@@ -1046,7 +1046,8 @@ def initiate_mpesa_stk(
         "CallBackURL": MPESA_CALLBACK_URL,
         "AccountReference": account_reference,
         "TransactionDesc": "GlobalVest Deposit",
-        }
+    }
+
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -1069,23 +1070,4 @@ def initiate_mpesa_stk(
             return {
                 "success": True,
                 "data": data,
-            }
-
-        return {
-            "success": False,
-            "message": data.get(
-                "errorMessage",
-                data.get(
-                    "ResponseDescription",
-                    "M-Pesa request was not accepted.",
-                ),
-            ),
-            "data": data,
-        }
-
-    except Exception as exc:
-        return {
-            "success": False,
-            "message": "Unable to connect to M-Pesa.",
-            "error": str(exc),
-        },
+    }
