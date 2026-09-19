@@ -1271,7 +1271,10 @@ def invest():
                 "Insufficient wallet balance.",
                 "danger"
             )
-            return render_template("invest.html")
+            return render_template(
+    "invest.html",
+    user=user
+            )
 
         rate = get_daily_rate()
 
@@ -1311,7 +1314,10 @@ def invest():
 
         return redirect(url_for("investments"))
 
-    return render_template("invest.html")
+    return render_template(
+    "invest.html",
+    user=user
+        )
 
 
 # ============================================================
@@ -1349,10 +1355,10 @@ def investments():
             "total_value": total_value
         })
 
-    return render_template(
-        "investments.html",
-        investments=investment_data
-    )
+ return render_template(
+    "invest.html",
+    user=user
+ )
 
 
 # ============================================================
