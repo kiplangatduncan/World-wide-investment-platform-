@@ -831,7 +831,7 @@ def initiate_stk_push(phone, amount, account_reference="GlobalVest"):
             "message": "M-Pesa callback URL is not configured."
         }
 
-    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
 
     password = mpesa_password(timestamp)
 
