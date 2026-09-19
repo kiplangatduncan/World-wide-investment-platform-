@@ -13,6 +13,7 @@ def invest():
         )
 
         if amount <= Decimal("0.00"):
+
             flash(
                 "Enter a valid investment amount.",
                 "danger"
@@ -24,6 +25,7 @@ def invest():
             )
 
         if money(user.balance) < amount:
+
             flash(
                 "Insufficient wallet balance.",
                 "danger"
@@ -57,7 +59,9 @@ def invest():
             - amount
         )
 
-        db.session.add(investment)
+        db.session.add(
+            investment
+        )
 
         create_transaction(
             user,
