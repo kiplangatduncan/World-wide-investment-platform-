@@ -455,7 +455,7 @@ class PlatformSetting(db.Model):
 # PART 2 — HELPERS, AUTHENTICATION & M-PESA
 # ============================================================
 
-def get_setting(key, default=None):
+  def get_setting(key, default=None):
     setting = PlatformSetting.query.filter_by(key=key).first()
 
     if setting:
@@ -502,18 +502,25 @@ def investment_profit(investment):
     if today <= investment.start_date:
         return Decimal("0.00")
 
-    end_date = min(today, investment.maturity_date)
+    end_date = min(
+        today,
+        investment.maturity_date
+    )
 
     elapsed_seconds = (
         end_date - investment.start_date
     ).total_seconds()
 
-    days = int(elapsed_seconds // 86400)
+    days = int(
+        elapsed_seconds // 86400
+    )
 
     if days <= 0:
         return Decimal("0.00")
 
-    rate = money(investment.daily_rate)
+    rate = money(
+        investment.daily_rate
+    )
 
     profit = (
         money(investment.amount)
@@ -549,11 +556,20 @@ def create_transaction(
 
     return transaction
 
-  @app.route("/invest", methods=["GET", "POST"])
+
+# ============================================================
+# INVEST
+# ============================================================
+
 @app.route("/invest", methods=["GET", "POST"])
 def invest():
 
     user = current_user()
+
+    if not user:
+        return redirect(
+            url_for("login")
+        )
 
     if request.method == "POST":
 
@@ -638,37 +654,108 @@ def invest():
         user=user
     )
 
+
+# ============================================================
+# INVESTMENTS
+# ============================================================
+
+@app.route("/investments")
+def investments():
+
+    user = current_user()
+
+    if not user:
+        return redirect(
+            url_for("login")
+        )
+
+    user_investments = Investment.query.filter_by(
+        user_id=user.id
+    ).order_by(
+        Investment.created_at.desc()
+    ).all()
+
+    investment_data = []
+
+    for investment in user_investments:
+
+        profit = investment_profit(
+            investment
+        )
+
+        total_value = (
+            money(investment.amount)
+            + profit
+        )
+
+        investment_data.append({
+            "investment": investment,
+            "profit": profit,
+            "total_value": total_value
+        })
+
+    return render_template(
+        "investments.html",
+        user=user,
+        investments=investment_data
+    )
+
+
+# ============================================================
+# ADMIN ACCESS
+# ============================================================
+
 def admin_required(view):
+
     @wraps(view)
     def wrapped(*args, **kwargs):
 
-        user_id = session.get("user_id")
+        user_id = session.get(
+            "user_id"
+        )
 
         if not user_id:
-            return redirect(url_for("login"))
+            return redirect(
+                url_for("login")
+            )
 
-        user = db.session.get(User, user_id)
+        user = db.session.get(
+            User,
+            user_id
+        )
 
         if not user or not user.is_admin:
+
             flash(
                 "Administrator access required.",
                 "danger"
             )
 
-            return redirect(url_for("dashboard"))
+            return redirect(
+                url_for("dashboard")
+            )
 
-        return view(*args, **kwargs)
+        return view(
+            *args,
+            **kwargs
+        )
 
     return wrapped
 
 
 def current_user():
-    user_id = session.get("user_id")
+
+    user_id = session.get(
+        "user_id"
+    )
 
     if not user_id:
         return None
 
-    return db.session.get(User, user_id)
+    return db.session.get(
+        User,
+        user_id
+    )
 
 
 # ============================================================
@@ -693,15 +780,23 @@ SUPPORTED_CURRENCIES = [
 
 
 def get_countries():
+
     countries = []
 
     for country in pycountry.countries:
-        name = getattr(country, "name", None)
+
+        name = getattr(
+            country,
+            "name",
+            None
+        )
 
         if name:
             countries.append(name)
 
-    return sorted(set(countries))
+    return sorted(
+        set(countries)
+    )
 
 
 def get_currencies():
@@ -712,19 +807,28 @@ def get_currencies():
 # PHONE NUMBER HELPERS
 # ============================================================
 
-def normalize_phone(phone, country="KE"):
+def normalize_phone(
+    phone,
+    country="KE"
+):
+
     if not phone:
         return None
 
-    phone = str(phone).strip()
+    phone = str(
+        phone
+    ).strip()
 
     try:
+
         parsed = phonenumbers.parse(
             phone,
             country
         )
 
-        if not phonenumbers.is_valid_number(parsed):
+        if not phonenumbers.is_valid_number(
+            parsed
+        ):
             return None
 
         return phonenumbers.format_number(
@@ -733,21 +837,29 @@ def normalize_phone(phone, country="KE"):
         )
 
     except Exception:
+
         return None
 
 
 def mpesa_phone(phone):
+
     """
     Convert a Kenyan phone number into the format
     normally expected by the Daraja API.
     """
 
-    normalized = normalize_phone(phone, "KE")
+    normalized = normalize_phone(
+        phone,
+        "KE"
+    )
 
     if not normalized:
         return None
 
-    number = normalized.replace("+", "")
+    number = normalized.replace(
+        "+",
+        ""
+    )
 
     if number.startswith("254"):
         return number
@@ -791,13 +903,20 @@ MPESA_CALLBACK_URL = os.getenv(
 
 
 def mpesa_base_url():
-    if MPESA_ENVIRONMENT == "production":
-        return "https://api.safaricom.co.ke"
 
-    return "https://sandbox.safaricom.co.ke"
+    if MPESA_ENVIRONMENT == "production":
+
+        return (
+            "https://api.safaricom.co.ke"
+        )
+
+    return (
+        "https://sandbox.safaricom.co.ke"
+    )
 
 
 def mpesa_access_token():
+
     """
     Request an OAuth access token from Safaricom Daraja.
     """
@@ -815,11 +934,16 @@ def mpesa_access_token():
     )
 
     encoded = base64.b64encode(
-        credentials.encode("utf-8")
-    ).decode("utf-8")
+        credentials.encode(
+            "utf-8"
+        )
+    ).decode(
+        "utf-8"
+    )
 
     headers = {
-        "Authorization": "Basic " + encoded
+        "Authorization":
+            "Basic " + encoded
     }
 
     url = (
@@ -828,6 +952,7 @@ def mpesa_access_token():
     )
 
     try:
+
         response = requests.get(
             url,
             headers=headers,
@@ -838,13 +963,17 @@ def mpesa_access_token():
 
         data = response.json()
 
-        return data.get("access_token")
+        return data.get(
+            "access_token"
+        )
 
     except Exception:
+
         return None
 
 
 def mpesa_password(timestamp):
+
     """
     Daraja password:
 
@@ -862,8 +991,12 @@ def mpesa_password(timestamp):
     )
 
     return base64.b64encode(
-        raw.encode("utf-8")
-    ).decode("utf-8")
+        raw.encode(
+            "utf-8"
+        )
+    ).decode(
+        "utf-8"
+    )
 
 
 def initiate_mpesa_stk(
@@ -872,10 +1005,10 @@ def initiate_mpesa_stk(
     account_reference,
     description
 ):
+
     """
     Initiate an M-Pesa STK Push.
 
-    IMPORTANT:
     A successful API response only means Safaricom
     accepted the request. The wallet must NOT be credited
     until the callback reports ResultCode == 0.
@@ -884,60 +1017,98 @@ def initiate_mpesa_stk(
     token = mpesa_access_token()
 
     if not token:
+
         return {
             "success": False,
-            "message": "M-Pesa credentials are not configured."
+            "message":
+                "M-Pesa credentials are not configured."
         }
 
-    phone_number = mpesa_phone(phone)
+    phone_number = mpesa_phone(
+        phone
+    )
 
     if not phone_number:
+
         return {
             "success": False,
-            "message": "Enter a valid Kenyan M-Pesa number."
+            "message":
+                "Enter a valid Kenyan M-Pesa number."
         }
 
     if not MPESA_SHORTCODE:
+
         return {
             "success": False,
-            "message": "M-Pesa shortcode is not configured."
+            "message":
+                "M-Pesa shortcode is not configured."
         }
 
     if not MPESA_PASSKEY:
+
         return {
             "success": False,
-            "message": "M-Pesa passkey is not configured."
+            "message":
+                "M-Pesa passkey is not configured."
         }
 
     if not MPESA_CALLBACK_URL:
+
         return {
             "success": False,
-            "message": "M-Pesa callback URL is not configured."
+            "message":
+                "M-Pesa callback URL is not configured."
         }
 
     timestamp = datetime.utcnow().strftime(
         "%Y%m%d%H%M%S"
     )
 
-    password = mpesa_password(timestamp)
+    password = mpesa_password(
+        timestamp
+    )
 
     payload = {
-        "BusinessShortCode": MPESA_SHORTCODE,
-        "Password": password,
-        "Timestamp": timestamp,
-        "TransactionType": "CustomerPayBillOnline",
-        "Amount": int(money(amount)),
-        "PartyA": phone_number,
-        "PartyB": MPESA_SHORTCODE,
-        "PhoneNumber": phone_number,
-        "CallBackURL": MPESA_CALLBACK_URL,
-        "AccountReference": account_reference,
-        "TransactionDesc": description[:50],
+        "BusinessShortCode":
+            MPESA_SHORTCODE,
+
+        "Password":
+            password,
+
+        "Timestamp":
+            timestamp,
+
+        "TransactionType":
+            "CustomerPayBillOnline",
+
+        "Amount":
+            int(money(amount)),
+
+        "PartyA":
+            phone_number,
+
+        "PartyB":
+            MPESA_SHORTCODE,
+
+        "PhoneNumber":
+            phone_number,
+
+        "CallBackURL":
+            MPESA_CALLBACK_URL,
+
+        "AccountReference":
+            account_reference,
+
+        "TransactionDesc":
+            description[:50],
     }
 
     headers = {
-        "Authorization": "Bearer " + token,
-        "Content-Type": "application/json",
+        "Authorization":
+            "Bearer " + token,
+
+        "Content-Type":
+            "application/json",
     }
 
     url = (
@@ -946,6 +1117,7 @@ def initiate_mpesa_stk(
     )
 
     try:
+
         response = requests.post(
             url,
             json=payload,
@@ -955,7 +1127,11 @@ def initiate_mpesa_stk(
 
         data = response.json()
 
-        if response.ok and data.get("ResponseCode") == "0":
+        if (
+            response.ok
+            and data.get("ResponseCode") == "0"
+        ):
+
             return {
                 "success": True,
                 "data": data
@@ -974,13 +1150,13 @@ def initiate_mpesa_stk(
         }
 
     except Exception as exc:
+
         return {
             "success": False,
-            "message": "Unable to connect to M-Pesa.",
+            "message":
+                "Unable to connect to M-Pesa.",
             "error": str(exc)
         }
-
-
 # ============================================================
 # END OF PART 2
 # ============================================================
