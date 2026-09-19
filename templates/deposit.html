@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-container"><div class="page-heading">
+
+    <div class="eyebrow">
+        WALLET
+    </div>
+
+    <h1>
+        Deposit funds
+    </h1>
+
+    <p>
+        Add funds to your GlobalVest wallet before making an investment.
+    </p>
+
+</div>
+
+
+<div class="invest-layout">
+
+
+    <!-- DEPOSIT FORM -->
+
+    <div class="panel">
+
+        <div class="panel-header">
+
+            <div>
+
+                <h2>
+                    Add funds
+                </h2>
+
+                <p>
+                    Choose your payment method and enter the amount.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <form
+            method="POST"
+            class="form"
+        >
+
+
+            <!-- COUNTRY -->
+
+            <label for="country">
+                Country
+            </label>
+
+            <select
+                name="country"
+                id="country"
+                required
+            >
+
+                <option value="">
+                    Select your country
+                </option>
+
+                <option value="Kenya">
+                    🇰🇪 Kenya
+                </option>
+
+                <option value="Uganda">
+                    🇺🇬 Uganda
+                </option>
+
+                <option value="Tanzania">
+                    🇹🇿 Tanzania
+                </option>
+
+                <option value="Rwanda">
+                    🇷🇼 Rwanda
+                </option>
+
+                <option value="Nigeria">
+                    🇳🇬 Nigeria
+                </option>
+
+                <option value="South Africa">
+                    🇿🇦 South Africa
+                </option>
+
+                <option value="Ghana">
+                    🇬🇭 Ghana
+                </option>
+
+                <option value="United States">
+                    🇺🇸 United States
+                </option>
+
+                <option value="Canada">
+                    🇨🇦 Canada
+                </option>
+
+                <option value="United Kingdom">
+                    🇬🇧 United Kingdom
+                </option>
+
+                <option value="Australia">
+                    🇦🇺 Australia
+                </option>
+
+                <option value="Germany">
+                    🇩🇪 Germany
+                </option>
+
+                <option value="France">
+                    🇫🇷 France
+                </option>
+
+                <option value="United Arab Emirates">
+                    🇦🇪 United Arab Emirates
+                </option>
+
+                <option value="India">
+                    🇮🇳 India
+                </option>
+
+                <option value="Japan">
+                    🇯🇵 Japan
+                </option>
+
+                <option value="China">
+                    🇨🇳 China
+                </option>
+
+            </select>
+
+
+            <!-- PAYMENT METHOD -->
+
+            <label for="method">
+                Payment method
+            </label>
+
+            <select
+                name="method"
+                id="method"
+                required
+            >
+
+                <option value="">
+                    Select payment method
+                </option>
+
+                <option value="M-Pesa">
+                    📱 M-Pesa
+                </option>
+
+                <option value="Bank Transfer">
+                    🏦 Bank Transfer
+                </option>
+
+                <option value="Card">
+                    💳 Debit / Credit Card
+                </option>
+
+                <option value="PayPal">
+                    💻 PayPal
+                </option>
+
+                <option value="Mobile Money">
+                    📲 Mobile Money
+                </option>
+
+            </select>
+
+
+            <!-- AMOUNT -->
+
+            <label for="amount">
+                Deposit amount
+            </label>
+
+            <div class="amount-input">
+
+                <span>
+                    {{ user.currency|default("USD") }}
+                </span>
+
+                <input
+                    type="number"
+                    id="amount"
+                    name="amount"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="0.00"
+                    required
+                >
+
+            </div>
+
+
+            <!-- PHONE -->
+
+            <label for="phone">
+                Payment phone number
+            </label>
+
+            <input
+                type="tel"
+                id="phone"
+                name="phone"
+                value="{{ user.phone|default('') }}"
+                placeholder="+254 700 000000"
+            >
+
+            <small class="input-help">
+                For M-Pesa, use the phone number registered with your M-Pesa account.
+            </small>
+
+
+            <!-- SUBMIT -->
+
+            <button
+                type="submit"
+                class="primary-button full"
+            >
+                Continue to payment
+            </button>
+
+        </form>
+
+    </div>
+
+
+    <!-- WALLET INFORMATION -->
+
+    <div class="plan-card">
+
+        <div class="plan-badge">
+            WALLET
+        </div>
+
+        <h2>
+            Your balance
+        </h2>
+
+        <div class="plan-duration">
+            {{ "%.2f"|format(user.balance|default(0)) }}
+            {{ user.currency|default("USD") }}
+        </div>
+
+        <div class="plan-detail">
+
+            <span>
+                Account
+            </span>
+
+            <strong>
+                Active
+            </strong>
+
+        </div>
+
+        <div class="plan-detail">
+
+            <span>
+                Payment status
+            </span>
+
+            <strong>
+                Secure
+            </strong>
+
+        </div>
+
+        <div class="notice">
+
+            Deposits made through payment providers may remain
+            pending until the transaction has been confirmed.
+            Do not submit the same payment repeatedly while a
+            transaction is being processed.
+
+        </div>
+
+    </div>
+
+</div>
+
+</div>{% endblock %}
