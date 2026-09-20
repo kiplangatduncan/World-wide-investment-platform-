@@ -37,9 +37,9 @@ load_dotenv()
 
 app = Flask(__name__)
 
-@app.route("/test")
-def test():
-    return "TEST WORKS"
+from mpesa import register_mpesa_routes
+
+register_mpesa_routes(app)
 
 
 app.config["SECRET_KEY"] = os.getenv(
