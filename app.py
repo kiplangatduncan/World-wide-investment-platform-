@@ -36,9 +36,13 @@ from werkzeug.security import (
 load_dotenv()
 
 app = Flask(__name__)
+
+
 @app.route("/mpesa")
 def mpesa_test():
     return "M-Pesa route is working"
+
+
 app.config["SECRET_KEY"] = os.getenv(
     "SECRET_KEY",
     "CHANGE-ME-IN-PRODUCTION"
