@@ -22,6 +22,7 @@ from flask import (
     jsonify,
 )
 
+from mpesa import mpesa_bp
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import (
     generate_password_hash,
