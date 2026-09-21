@@ -21,8 +21,7 @@ from flask import (
     flash,
     jsonify,
 )
-
-from mpesa import mpesa_bp
+from app.mpesa import mpesa_bp
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import (
     generate_password_hash,
@@ -37,6 +36,7 @@ from werkzeug.security import (
 load_dotenv()
 
 app = Flask(__name__)
+app.register_blueprint(mpesa_bp)
 
 @app.route("/mpesa")
 def mpesa():
